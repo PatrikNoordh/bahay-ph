@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
@@ -21,6 +21,20 @@ export const metadata: Metadata = {
   title: "Bahay.ph — Find Your Home in Cebu",
   description:
     "Browse verified property listings in Cebu. Houses, condos, lots and more — listed by licensed brokers only.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Bahay.ph",
+  },
+  icons: {
+    apple: "/icon-192.png",
+  },
+};
+
+// AC4 — Theme color: terracotta (#C1440E) for Android Chrome address bar + splash
+export const viewport: Viewport = {
+  themeColor: "#C1440E",
 };
 
 export default function RootLayout({
