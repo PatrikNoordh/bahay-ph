@@ -141,15 +141,16 @@ bahay/BH-01-project-setup
 bahay/BH-07-property-detail
 bahay/BH-10-agent-dashboard
 ***Commit Rules
-All commits must start with [claude].
+All commits must start with [claude] (MODEL_NAME).
 First commit on branch:
-[claude] BH-<N> Title Case Description
+[claude] (claude-haiku-4-5) BH-<N> Title Case Description
 Subsequent commits:
-[claude] [<type>] imperative description
+[claude] (claude-haiku-4-5) [<type>] imperative description
 Types: feat fix style refactor chore docs perf test
 Rules:
 Imperative tense always
 Under 72 characters
+Never include Co-Authored-By footer
 Never git add . or git add -A
 Never --no-verify
 ***Pull Request Rules
