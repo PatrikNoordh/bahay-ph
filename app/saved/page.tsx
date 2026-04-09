@@ -1,10 +1,12 @@
-import { createServerSupabaseClient } from "@/lib/supabase";
 import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase";
 import { Topbar } from "@/components/Topbar";
+import { SavedScreen } from "@/components/SavedScreen";
+import type { Property } from "@/lib/types";
+import type { SavedItem } from "@/components/SavedScreen";
 
-// AC6 — Protected route: middleware redirects unauthenticated users to /auth
-// This check is a server-side defence-in-depth fallback
-// TODO: connect to Supabase saved_properties — fetch user's saved listings (Phase 2 — BH-19)
+// AC1 — Protected: middleware redirects unauthenticated users; this is defence-in-depth
+// AC2 — Fetches saved_properties joined with properties for the authenticated user
 
 export default async function SavedPage() {
   const supabase = await createServerSupabaseClient();
@@ -14,19 +16,25 @@ export default async function SavedPage() {
 
   if (!user) redirect("/auth?redirectTo=/saved");
 
+  // AC2 — Fetch saved_properties with joined property rows, newest first
+  const { data: rows } = await supabase
+    .from("saved_properties")
+    .select("id, properties(*)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  // Flatten into SavedItem[] — filter out orphans (property deleted after saving)
+  const items: SavedItem[] = (rows ?? [])
+    .filter((row) => row.properties !== null)
+    .map((row) => ({
+      savedId: row.id,
+      property: row.properties as unknown as Property,
+    }));
+
   return (
-    <div className="pb-16">
+    <div className="h-full flex flex-col">
       <Topbar />
-      <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-        <p className="text-4xl mb-3" aria-hidden="true">❤️</p>
-        <p className="font-display font-semibold text-lg text-narra mb-1">
-          Your saved properties
-        </p>
-        <p className="text-sm text-muted">
-          Properties you save will appear here.
-        </p>
-        {/* TODO: render saved PropertyCard grid (Phase 2 — BH-19) */}
-      </div>
+      <SavedScreen initialItems={items} />
     </div>
   );
 }
