@@ -1,32 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand colors */
-  --color-primary: #C1440E;
+  /* ── Brand colors ────────────────────────────────────── */
+  --color-primary:       #C1440E;
   --color-primary-light: #E07B3A;
-  --color-primary-pale: #FDF0E8;
-  --color-ocean: #1A5FA8;
-  --color-green: #1D9E75;
-  --color-sand: #F8F3EC;
-  --color-sand-dark: #EDE5D8;
-  --color-narra: #2C1A0E;
-  --color-muted: #7A6A5E;
+  --color-primary-pale:  #FDF0E8;
+  --color-ocean:         #1A5FA8;
+  --color-green:         #1D9E75;
+  --color-sand:          #F8F3EC;
+  --color-sand-dark:     #EDE5D8;
+  --color-narra:         #2C1A0E;
+  --color-muted:         #7A6A5E;
+  --color-muted-light:   #A89888;
 
-  /* Typography */
+  /* ── Typography ──────────────────────────────────────── */
   --font-display: var(--font-playfair), Georgia, serif;
-  --font-body: var(--font-dm-sans), system-ui, sans-serif;
+  --font-body:    var(--font-dm-sans), system-ui, sans-serif;
 
-  /* Border radius */
-  --radius-card: 14px;
-  --radius-hero: 20px;
+  /* ── Border radius ───────────────────────────────────── */
+  --radius-card:   14px;
+  --radius-hero:   20px;
   --radius-button: 12px;
 
-  /* Shadows */
-  --shadow-card: 0 2px 16px rgba(44, 26, 14, 0.08);
+  /* ── Shadows ─────────────────────────────────────────── */
+  --shadow-card:       0 2px 16px rgba(44, 26, 14, 0.08);
+  --shadow-card-hover: 0 4px 24px rgba(44, 26, 14, 0.14);
 }
 
+/* ── Global layout tokens ────────────────────────────────── */
+:root {
+  --nav-height: 64px;
+}
+
+/* ── Base styles ─────────────────────────────────────────── */
 body {
-  background-color: #F8F3EC;
-  color: #2C1A0E;
+  background-color: var(--color-sand);
+  color: var(--color-narra);
   font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
 }
