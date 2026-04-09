@@ -64,6 +64,31 @@ body {
   animation-delay: 250ms;
 }
 
+/* ── Image placeholder gradients (AC7 — PropertyCard) ────────── */
+@utility img-placeholder-1 {
+  background-image: linear-gradient(to bottom right, #155e75, #0f766e, #0e7490);
+}
+
+@utility img-placeholder-2 {
+  background-image: linear-gradient(to bottom right, #15803d, #16a34a, #0f766e);
+}
+
+@utility img-placeholder-3 {
+  background-image: linear-gradient(to bottom right, #6d28d9, #9333ea, #4338ca);
+}
+
+@utility img-placeholder-4 {
+  background-image: linear-gradient(to bottom right, #b45309, #ca8a04, #ea580c);
+}
+
+@utility img-placeholder-5 {
+  background-image: linear-gradient(to bottom right, #0369a1, #2563eb, #0891b2);
+}
+
+@utility img-placeholder-6 {
+  background-image: linear-gradient(to bottom right, #be123c, #dc2626, #ea580c);
+}
+
 /* ── Respect prefers-reduced-motion ──────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

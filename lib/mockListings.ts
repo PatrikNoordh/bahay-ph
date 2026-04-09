@@ -16,7 +16,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: 280,
     lot: 450,
     location: "Punta Engano, Lapu-Lapu City",
-    img: "from-cyan-800 via-teal-700 to-cyan-600",
+    img: "img-placeholder-1",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -48,7 +48,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: 150,
     lot: 200,
     location: "Pilipog, Cordova",
-    img: "from-emerald-700 via-green-600 to-teal-600",
+    img: "img-placeholder-2",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -80,7 +80,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: 42,
     lot: null,
     location: "Apas, Cebu City",
-    img: "from-violet-700 via-purple-600 to-indigo-600",
+    img: "img-placeholder-3",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -112,7 +112,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: null,
     lot: 200,
     location: "Bakilid, Mandaue City",
-    img: "from-amber-700 via-yellow-600 to-orange-500",
+    img: "img-placeholder-4",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -144,7 +144,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: 55,
     lot: null,
     location: "Cebu IT Park, Cebu City",
-    img: "from-sky-700 via-blue-600 to-cyan-600",
+    img: "img-placeholder-5",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -176,7 +176,7 @@ export const MOCK_LISTINGS: Listing[] = [
     area: 110,
     lot: 80,
     location: "San Isidro, Talisay City",
-    img: "from-rose-700 via-red-600 to-orange-600",
+    img: "img-placeholder-6",
     agent: {
       name: "Maria Reyes",
       initials: "MR",
