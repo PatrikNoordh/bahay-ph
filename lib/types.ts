@@ -88,3 +88,35 @@ export interface PropertyDetail extends Property {
   agent: Agent | null;
   property_images: PropertyImage[];
 }
+
+// ============================================================
+// UI display type — used by mock data and future useListings hook
+// ============================================================
+
+export interface ListingAgent {
+  name: string;
+  initials: string;
+  company: string;
+  experience: number;
+}
+
+export interface Listing {
+  id: string;
+  name: string;
+  price: string;         // formatted: "₱18,500,000"
+  priceShort: string;    // compact: "₱18.5M"
+  type: PropertyType;
+  badge: string;         // "For Sale" | "For Rent" | "New"
+  badgeClass: string;    // Tailwind classes for badge pill
+  beds: number | null;
+  baths: number | null;
+  area: number | null;   // floor_area in m²
+  lot: number | null;    // lot_size in m²
+  location: string;      // "Barangay, City"
+  img: string;           // Tailwind gradient class for placeholder image
+  agent: ListingAgent;
+  description: string;
+  features: string[];
+  mapPos: { top: string; left: string }; // CSS % position on illustrative map
+  tags: string[];
+}
