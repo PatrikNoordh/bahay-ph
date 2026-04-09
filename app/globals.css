@@ -65,6 +65,15 @@ body {
 }
 
 /* ── Image placeholder gradients (AC7 — PropertyCard) ────────── */
+/* ── Hide scrollbars (horizontal scroll rows) ────────────────── */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @utility img-placeholder-1 {
   background-image: linear-gradient(to bottom right, #155e75, #0f766e, #0e7490);
 }
