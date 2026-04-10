@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -32,11 +33,17 @@ interface SavedEntry {
 export function SavedPropertiesProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [savedMap, setSavedMap] = useState<SavedMap>({});
+  // Per-property sequence counter — used to discard stale async responses
+  const seqRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     fetch("/api/saved")
       .then((res) => {
-        if (!res.ok) return null; // 401 = not logged in — empty map is correct
+        if (res.status === 401) return null; // Not logged in — empty map is correct
+        if (!res.ok) {
+          console.warn(`[SavedProperties] GET /api/saved returned ${res.status}`);
+          return null;
+        }
         return res.json() as Promise<SavedEntry[]>;
       })
       .then((data) => {
@@ -57,6 +64,16 @@ export function SavedPropertiesProvider({ children }: { children: ReactNode }) {
     async (propertyId: string) => {
       const savedId = savedMap[propertyId] ?? null;
       const wasSaved = savedId !== null;
+
+      // Skip toggle if a previous save is still in-flight (placeholder not yet resolved)
+      // to prevent issuing DELETE with an invalid placeholder id
+      if (savedId === "__optimistic__") return;
+
+      // Bump per-property sequence counter. Responses that arrive after a newer toggle
+      // has been issued are discarded to prevent out-of-order state updates.
+      const seq = (seqRef.current[propertyId] ?? 0) + 1;
+      seqRef.current[propertyId] = seq;
+      const isStale = () => seqRef.current[propertyId] !== seq;
 
       // AC3 — optimistic update
       setSavedMap((prev) => {
@@ -81,6 +98,9 @@ export function SavedPropertiesProvider({ children }: { children: ReactNode }) {
               body: JSON.stringify({ property_id: propertyId }),
             }));
 
+        // Discard response if a newer toggle has already been issued
+        if (isStale()) return;
+
         // AC4 — not authenticated → revert + redirect to /auth
         if (res.status === 401) {
           setSavedMap((prev) => {
@@ -93,8 +113,14 @@ export function SavedPropertiesProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // 409 = duplicate save — optimistic state (isSaved=true) is already correct
-        if (res.status === 409) return;
+        // 409 = row already exists — resolve placeholder with the real saved_properties.id
+        if (res.status === 409) {
+          const data = (await res.json()) as { id?: string };
+          if (data.id) {
+            setSavedMap((prev) => ({ ...prev, [propertyId]: data.id as string }));
+          }
+          return;
+        }
 
         if (!res.ok) throw new Error("API error");
 
@@ -104,6 +130,8 @@ export function SavedPropertiesProvider({ children }: { children: ReactNode }) {
           setSavedMap((prev) => ({ ...prev, [propertyId]: data.id }));
         }
       } catch {
+        // Discard stale revert
+        if (isStale()) return;
         // AC3 — revert optimistic update on network/API failure
         setSavedMap((prev) => {
           if (wasSaved) return { ...prev, [propertyId]: savedId! };
