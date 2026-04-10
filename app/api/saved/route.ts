@@ -1,6 +1,29 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+// GET /api/saved — return the current user's saved properties (id + property_id)
+export async function GET() {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data, error } = await supabase
+    .from("saved_properties")
+    .select("id, property_id")
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
 // POST /api/saved — save a property for the authenticated user
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -25,9 +48,22 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    // Unique constraint violation — already saved
+    // Unique constraint violation — already saved; return the existing row id so
+    // the client can replace the "__optimistic__" placeholder with the real id
     if (error.code === "23505") {
-      return NextResponse.json({ error: "Already saved" }, { status: 409 });
+      const { data: existing, error: fetchError } = await supabase
+        .from("saved_properties")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("property_id", body.property_id)
+        .single();
+      if (fetchError || !existing) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json(
+        { error: "Already saved", id: existing.id },
+        { status: 409 }
+      );
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

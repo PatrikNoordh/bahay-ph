@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Listing } from "@/lib/types";
+import { useSavedProperty } from "@/hooks/useSavedProperties";
 
-// TODO: connect to Supabase saved_properties for heart toggle (Phase 2 — AC17)
 // TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
 // TODO: WhatsApp CTA — wa.me/63XXXXXXXXXX link (Phase 2 — AC15)
 // TODO: Call agent — tel: link (Phase 2 — AC16)
@@ -15,7 +14,8 @@ interface PropertyDetailPageProps {
 
 export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
   const router = useRouter();
-  const [saved, setSaved] = useState(false);
+  // AC6 — listing.id is stable; hook reads from SavedPropertiesProvider context
+  const { isSaved, toggle } = useSavedProperty(listing?.id ?? "");
 
   // ── 404 fallback — unknown ID (edge case) ──────────────────
   if (!listing) {
@@ -83,15 +83,12 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
 
             <button
               type="button"
-              aria-label={saved ? "Remove from saved" : "Save property"}
-              onClick={() => {
-                setSaved((s) => !s);
-                // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC17)
-              }}
+              aria-label={isSaved ? "Remove from saved" : "Save property"}
+              onClick={() => void toggle()}
               className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
             >
               <span aria-hidden="true" className="text-base leading-none">
-                {saved ? "❤️" : "🤍"}
+                {isSaved ? "❤️" : "🤍"}
               </span>
             </button>
           </div>
