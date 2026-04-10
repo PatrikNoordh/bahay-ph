@@ -1,8 +1,22 @@
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing } from "@/lib/utils";
+import type { PropertyWithAgent } from "@/lib/types";
 import { MapScreen } from "@/components/MapScreen";
 
-// TODO: connect to Supabase — server-side query with lat/lng coords, filter active only (Phase 2 — AC11)
+export default async function MapPage() {
+  const supabase = await createServerSupabaseClient();
 
-export default function MapPage() {
-  return <MapScreen listings={MOCK_LISTINGS} />;
+  // Fetch active properties with lat/lng for map pin rendering
+  const { data } = await supabase
+    .from("properties")
+    .select("*, agent:agents(*)")
+    .eq("status", "active")
+    .not("latitude", "is", null)
+    .not("longitude", "is", null);
+
+  const listings = ((data ?? []) as PropertyWithAgent[]).map((p) =>
+    propertyToListing(p, p.agent)
+  );
+
+  return <MapScreen listings={listings} />;
 }

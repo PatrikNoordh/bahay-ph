@@ -1,18 +1,37 @@
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing } from "@/lib/utils";
+import type { PropertyWithAgent } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { SearchScreen } from "@/components/SearchScreen";
 
-// TODO: connect to Supabase — server-side query, pass real listings as props (Phase 2 — AC6)
+interface SearchPageProps {
+  searchParams: Promise<{ city?: string }>;
+}
 
-export default function SearchPage() {
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const { city } = await searchParams;
+  const supabase = await createServerSupabaseClient();
+
+  let query = supabase
+    .from("properties")
+    .select("*, agent:agents(*)")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (city) {
+    query = query.eq("city", city);
+  }
+
+  const { data } = await query;
+
+  const listings = ((data ?? []) as PropertyWithAgent[]).map((p) =>
+    propertyToListing(p, p.agent)
+  );
+
   return (
-    // dvh units prevent layout shift when mobile keyboard opens (edge case)
     <div className="min-h-[100dvh] pb-16">
-      {/* AC5 — Topbar with settings icon on right */}
       <Topbar actions={[{ icon: "⚙️", label: "Settings" }]} />
-
-      {/* All search interactivity lives in the Client Component */}
-      <SearchScreen listings={MOCK_LISTINGS} />
+      <SearchScreen listings={listings} />
     </div>
   );
 }
