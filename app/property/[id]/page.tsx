@@ -1,9 +1,8 @@
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { notFound } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing } from "@/lib/utils";
+import type { PropertyDetail } from "@/lib/types";
 import { PropertyDetailPage } from "@/components/PropertyDetailPage";
-
-// TODO: connect to Supabase — fetch property + agent + images by ID (Phase 2 — AC13)
-// TODO: add generateMetadata for SEO (Phase 2 — AC18)
-// TODO: call notFound() when property not found (Phase 2 — AC19)
 
 interface PropertyPageProps {
   params: Promise<{ id: string }>;
@@ -11,12 +10,22 @@ interface PropertyPageProps {
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { id } = await params;
+  const supabase = await createServerSupabaseClient();
 
-  // TODO: replace with Supabase server query (Phase 2 — AC13)
-  const listing = MOCK_LISTINGS.find((l) => l.id === id) ?? null;
+  const { data, error } = await supabase
+    .from("properties")
+    .select("*, agent:agents(*), property_images(*)")
+    .eq("id", id)
+    .single();
 
-  // Nested flex layout: scrollable content + sticky CTA both inside <main>
-  // Avoids position:fixed issues inside the AppShell frame on desktop
+  // AC edge case: property not found → 404
+  if (error || !data) {
+    notFound();
+  }
+
+  const detail = data as PropertyDetail;
+  const listing = propertyToListing(detail, detail.agent, detail.property_images);
+
   return (
     <div className="h-full flex flex-col">
       <PropertyDetailPage listing={listing} />
