@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import type { Listing } from "@/lib/types";
+import { useSavedProperty } from "@/hooks/useSavedProperties";
 
 export interface PropertyCardProps {
   listing: Listing;
@@ -11,8 +11,7 @@ export interface PropertyCardProps {
 
 // AC1 — accepts Listing (UI display type) and variant
 export function PropertyCard({ listing, variant }: PropertyCardProps) {
-  // AC6 — heart toggle state; TODO: connect to Supabase saved_properties (Phase 2 — AC12)
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggle } = useSavedProperty(listing.id);
 
   const isLotOnly = listing.beds === null && listing.baths === null;
 
@@ -29,17 +28,16 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
   const heart = (
     <button
       type="button"
-      aria-label={saved ? "Remove from saved" : "Save property"}
+      aria-label={isSaved ? "Remove from saved" : "Save property"}
       className="absolute top-[10px] right-[10px] w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center active:scale-[0.92] transition-transform duration-100"
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setSaved((s) => !s);
-        // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC12)
+        void toggle();
       }}
     >
       <span aria-hidden="true" className="text-sm leading-none">
-        {saved ? "❤️" : "🤍"}
+        {isSaved ? "❤️" : "🤍"}
       </span>
     </button>
   );
@@ -159,17 +157,16 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
       <div className="pr-3 flex-shrink-0">
         <button
           type="button"
-          aria-label={saved ? "Remove from saved" : "Save property"}
+          aria-label={isSaved ? "Remove from saved" : "Save property"}
           className="w-8 h-8 rounded-full bg-sand flex items-center justify-center active:scale-[0.92] transition-transform duration-100"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setSaved((s) => !s);
-            // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC12)
+            void toggle();
           }}
         >
           <span aria-hidden="true" className="text-sm leading-none">
-            {saved ? "❤️" : "🤍"}
+            {isSaved ? "❤️" : "🤍"}
           </span>
         </button>
       </div>
