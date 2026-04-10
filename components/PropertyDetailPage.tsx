@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { Listing } from "@/lib/types";
 import { useSavedProperty } from "@/hooks/useSavedProperties";
-import { buildWhatsAppUrl } from "@/lib/utils";
+import { buildWhatsAppUrl, buildPhoneUrl } from "@/lib/utils";
 
 // TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
 // TODO: WhatsApp CTA — wa.me/63XXXXXXXXXX link (Phase 2 — AC15)
@@ -47,6 +47,11 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
     listing.agent?.phone
       ? buildWhatsAppUrl(listing.agent.phone, listing.name)
       : null;
+
+  // BH-25 — tel: deep link for native dialler; null hides the Call button entirely
+  const phoneUrl = listing.agent?.phone
+    ? buildPhoneUrl(listing.agent.phone)
+    : null;
 
   // Specs for the specs row (AC5) — up to 4, lot-only hides beds/baths
   const specs = [
@@ -200,17 +205,16 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
                     </p>
                   </div>
                 </div>
-                {/* AC8 — Call + Chat buttons */}
+                {/* Call + Chat buttons — AC3: Call hidden when no phone */}
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-sand-dark rounded-[12px] py-2.5 text-sm font-medium text-narra active:scale-[0.97] transition-transform duration-100"
-                    onClick={() => {
-                      // TODO: open tel: link — agent.phone (Phase 2 — AC16)
-                    }}
-                  >
-                    <span aria-hidden="true">📞</span> Call
-                  </button>
+                  {phoneUrl && (
+                    <a
+                      href={phoneUrl}
+                      className="flex-1 flex items-center justify-center gap-1.5 border border-sand-dark rounded-[12px] py-2.5 text-sm font-medium text-narra active:scale-[0.97] transition-transform duration-100"
+                    >
+                      <span aria-hidden="true">📞</span> Call
+                    </a>
+                  )}
                   {/* AC1–AC3 — WhatsApp deep link; AC4 — disabled when no phone */}
                   {whatsAppUrl ? (
                     <a
