@@ -1,13 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
 import { useSavedProperty } from "@/hooks/useSavedProperties";
 import { buildWhatsAppUrl, buildPhoneUrl } from "@/lib/utils";
 
+// AC11 — Mini map is client-only (Leaflet accesses window)
+const DynamicMiniMap = dynamic(
+  () => import("@/components/LeafletMiniMap").then((m) => ({ default: m.LeafletMiniMap })),
+  {
+    ssr: false,
+    loading: () => <div className="absolute inset-0 bg-lime-100 animate-pulse rounded-[14px]" />,
+  }
+);
+
 // TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
-// TODO: WhatsApp CTA — wa.me/63XXXXXXXXXX link (Phase 2 — AC15)
-// TODO: Call agent — tel: link (Phase 2 — AC16)
 
 interface PropertyDetailPageProps {
   listing: Listing | null;
@@ -247,22 +255,29 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
             )}
           </div>
 
-          {/* AC9 — Map placeholder with pulsing ripple animation */}
-          {/* TODO: replace with embedded Leaflet map centred on listing lat/lng (Phase 2) */}
+          {/* AC11 — Leaflet mini-map centred on listing coords; ripple fallback when no coords */}
           <div className="mb-4">
             <h2 className="font-display font-semibold text-sm text-narra mb-2">
               Location
             </h2>
-            <div className="relative h-[160px] rounded-[14px] bg-lime-100 overflow-hidden flex items-center justify-center">
-              {/* Ripple rings — animate-ping must not cause layout reflow */}
-              <span className="absolute inline-flex h-16 w-16 rounded-full bg-primary/20 animate-ping" />
-              <span className="absolute inline-flex h-10 w-10 rounded-full bg-primary/30 animate-ping [animation-delay:150ms]" />
-              {/* Centre dot */}
-              <span className="relative inline-flex h-4 w-4 rounded-full bg-primary shadow-[var(--shadow-card)]" />
-              {/* Location label */}
-              <span className="absolute bottom-3 left-0 right-0 text-center text-[11px] text-muted font-medium">
-                {listing.location}
-              </span>
+            <div className="relative h-[160px] rounded-[14px] overflow-hidden">
+              {listing.lat !== null && listing.lng !== null ? (
+                <DynamicMiniMap
+                  lat={listing.lat}
+                  lng={listing.lng}
+                  title={listing.name}
+                />
+              ) : (
+                // Fallback when lat/lng are not yet available
+                <div className="absolute inset-0 bg-lime-100 flex items-center justify-center">
+                  <span className="absolute inline-flex h-16 w-16 rounded-full bg-primary/20 animate-ping" />
+                  <span className="absolute inline-flex h-10 w-10 rounded-full bg-primary/30 animate-ping [animation-delay:150ms]" />
+                  <span className="relative inline-flex h-4 w-4 rounded-full bg-primary shadow-[var(--shadow-card)]" />
+                  <span className="absolute bottom-3 left-0 right-0 text-center text-[11px] text-muted font-medium">
+                    {listing.location}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

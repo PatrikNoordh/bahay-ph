@@ -119,5 +119,7 @@ export interface Listing {
   description: string;
   features: string[];
   mapPos: { top: string; left: string }; // CSS % position on illustrative map
+  lat: number | null;   // WGS-84 latitude for Leaflet map
+  lng: number | null;   // WGS-84 longitude for Leaflet map
   tags: string[];
 }

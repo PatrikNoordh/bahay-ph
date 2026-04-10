@@ -34,6 +34,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Covered parking",
     ],
     mapPos: { top: "50%", left: "82%" },
+    lat: 10.2927,
+    lng: 124.0044,
     tags: ["Beachfront", "Luxury", "Investment"],
   },
   {
@@ -67,6 +69,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Near beach",
     ],
     mapPos: { top: "58%", left: "72%" },
+    lat: 10.2456,
+    lng: 123.9587,
     tags: ["Modern", "Tropical", "New build"],
   },
   {
@@ -100,6 +104,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Pet-friendly",
     ],
     mapPos: { top: "28%", left: "58%" },
+    lat: 10.3316,
+    lng: 123.9049,
     tags: ["City living", "Investment", "IT Park"],
   },
   {
@@ -133,6 +139,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Near major roads",
     ],
     mapPos: { top: "22%", left: "63%" },
+    lat: 10.3595,
+    lng: 123.9480,
     tags: ["Prime location", "Development", "Corner lot"],
   },
   {
@@ -166,6 +174,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Near Ayala mall",
     ],
     mapPos: { top: "34%", left: "56%" },
+    lat: 10.3344,
+    lng: 123.9062,
     tags: ["Furnished", "Expat-friendly", "Short-term ok"],
   },
   {
@@ -199,6 +209,8 @@ export const MOCK_LISTINGS: Listing[] = [
       "Secure subdivision",
     ],
     mapPos: { top: "64%", left: "38%" },
+    lat: 10.2449,
+    lng: 123.8418,
     tags: ["Family home", "Subdivision", "New build"],
   },
 ];
