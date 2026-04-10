@@ -98,6 +98,7 @@ export interface ListingAgent {
   initials: string;
   company: string;
   experience: number;
+  phone: string | null;
 }
 
 export interface Listing {

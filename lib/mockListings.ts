@@ -22,6 +22,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Stunning beachfront villa with direct ocean access and private pool. Wake up to panoramic views of the Cebu Strait. Open-plan living, high ceilings, fully furnished — perfect for families or as a premium rental investment.",
@@ -54,6 +55,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Brand new 3-bedroom modern tropical home in the heart of Cordova. Open-concept design, natural ventilation, native wood accents, spacious lanai. Walking distance to local markets and the beach.",
@@ -86,6 +88,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Sleek 2-bedroom condo in the vibrant IT Park district. Walking distance to restaurants, cafes, and tech offices. High floor with city views, gym, pool, 24/7 security. Ideal for professionals or investors.",
@@ -118,6 +121,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Prime corner lot in a fast-developing residential area of Mandaue City. Flat terrain, ready for construction. Close to major roads, malls, and schools. Clean title, all utilities available.",
@@ -150,6 +154,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Fully furnished 2-bedroom condo near Ayala Center Cebu. Move-in ready with modern appliances, fast WiFi, and access to premium amenities. Perfect for expats and professionals.",
@@ -182,6 +187,7 @@ export const MOCK_LISTINGS: Listing[] = [
       initials: "MR",
       company: "Cebu Grand Realty",
       experience: 12,
+      phone: "09171234567",
     },
     description:
       "Newly built 3-bedroom townhouse in a quiet and secure subdivision in Talisay City. Modern design, covered parking, private backyard. Minutes from the South Road Properties expressway.",

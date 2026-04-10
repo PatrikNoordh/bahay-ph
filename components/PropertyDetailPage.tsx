@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { Listing } from "@/lib/types";
 import { useSavedProperty } from "@/hooks/useSavedProperties";
+import { buildWhatsAppUrl } from "@/lib/utils";
 
 // TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
 // TODO: WhatsApp CTA — wa.me/63XXXXXXXXXX link (Phase 2 — AC15)
@@ -40,6 +41,12 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
   }
 
   const isLotOnly = listing.beds === null && listing.baths === null;
+
+  // AC1–AC4 — WhatsApp deep link; null when agent has no phone on record
+  const whatsAppUrl =
+    listing.agent?.phone
+      ? buildWhatsAppUrl(listing.agent.phone, listing.name)
+      : null;
 
   // Specs for the specs row (AC5) — up to 4, lot-only hides beds/baths
   const specs = [
@@ -204,15 +211,26 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
                   >
                     <span aria-hidden="true">📞</span> Call
                   </button>
-                  <button
-                    type="button"
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-green text-white rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
-                    onClick={() => {
-                      // TODO: open WhatsApp wa.me/63... link (Phase 2 — AC15)
-                    }}
-                  >
-                    <span aria-hidden="true">💬</span> Chat
-                  </button>
+                  {/* AC1–AC3 — WhatsApp deep link; AC4 — disabled when no phone */}
+                  {whatsAppUrl ? (
+                    <a
+                      href={whatsAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-green text-white rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
+                    >
+                      <span aria-hidden="true">💬</span> Chat
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Contact info unavailable"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-sand-dark text-muted rounded-[12px] py-2.5 text-sm font-medium cursor-not-allowed opacity-60"
+                    >
+                      <span aria-hidden="true">💬</span> Chat
+                    </button>
+                  )}
                 </div>
               </>
             ) : (
@@ -258,16 +276,26 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
               {listing.price}
             </p>
           </div>
-          {/* Right: Contact agent CTA */}
-          <button
-            type="button"
-            className="flex-shrink-0 bg-primary text-white font-medium text-sm rounded-xl px-5 py-3 active:scale-[0.97] transition-transform duration-100"
-            onClick={() => {
-              // TODO: open WhatsApp wa.me/63... link (Phase 2 — AC15)
-            }}
-          >
-            Contact agent
-          </button>
+          {/* AC5 — sticky CTA: WhatsApp deep link or disabled */}
+          {whatsAppUrl ? (
+            <a
+              href={whatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 bg-primary text-white font-medium text-sm rounded-xl px-5 py-3 active:scale-[0.97] transition-transform duration-100"
+            >
+              Contact agent
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Contact info unavailable"
+              className="flex-shrink-0 bg-sand-dark text-muted font-medium text-sm rounded-xl px-5 py-3 cursor-not-allowed opacity-60"
+            >
+              Contact agent
+            </button>
+          )}
         </div>
       </div>
     </>
