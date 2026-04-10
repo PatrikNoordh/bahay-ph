@@ -23,6 +23,19 @@ export function buildWhatsAppUrl(phone: string, propertyTitle: string): string {
 }
 
 /**
+ * Build a tel: deep-link for the native phone dialler.
+ * Normalises PH numbers: strips spaces/dashes, removes leading 0, prefixes +63.
+ * Handles numbers already prefixed with +63 or 63 to avoid double-prefixing.
+ */
+export function buildPhoneUrl(phone: string): string {
+  // Strip all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+  // Remove leading country code if already present (63...), then strip leading 0
+  const local = digits.replace(/^63/, "").replace(/^0/, "");
+  return `tel:+63${local}`;
+}
+
+/**
  * Return a short display label for a city in Metro Cebu.
  */
 export function shortCity(city: string): string {
