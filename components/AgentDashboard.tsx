@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import type { Property, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+
+// BH-30 — Leaflet picker is client-only (accesses window)
+const DynamicLocationPicker = dynamic(
+  () => import("@/components/LocationPickerMap").then((m) => ({ default: m.LocationPickerMap })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] rounded-[14px] bg-sand-dark animate-pulse" />
+    ),
+  }
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +35,8 @@ interface FormValues {
   address: string;
   city: string;
   barangay: string;
+  latitude: string;
+  longitude: string;
 }
 
 const EMPTY_FORM: FormValues = {
@@ -38,6 +52,8 @@ const EMPTY_FORM: FormValues = {
   address: "",
   city: "",
   barangay: "",
+  latitude: "",
+  longitude: "",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -71,8 +87,8 @@ function listingFromForm(form: FormValues, agentId: string): Omit<Property, "id"
     address: form.address.trim() || null,
     city: form.city.trim(),
     barangay: form.barangay.trim() || null,
-    latitude: null,
-    longitude: null,
+    latitude: form.latitude ? Number(form.latitude) : null,
+    longitude: form.longitude ? Number(form.longitude) : null,
     status: "active",
     is_featured: false,
     agent_id: agentId,
@@ -93,6 +109,8 @@ function formFromListing(l: Property): FormValues {
     address: l.address ?? "",
     city: l.city,
     barangay: l.barangay ?? "",
+    latitude: l.latitude !== null ? String(l.latitude) : "",
+    longitude: l.longitude !== null ? String(l.longitude) : "",
   };
 }
 
@@ -140,6 +158,21 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
   const handleSave = useCallback(async () => {
     if (!form.title.trim() || !form.price || !form.city.trim()) {
       setFormError("Title, price and city are required.");
+      return;
+    }
+
+    const lat = form.latitude ? Number(form.latitude) : null;
+    const lng = form.longitude ? Number(form.longitude) : null;
+    if ((lat !== null) !== (lng !== null)) {
+      setFormError("Both latitude and longitude must be set together.");
+      return;
+    }
+    if (lat !== null && (lat < -90 || lat > 90)) {
+      setFormError("Latitude must be between -90 and 90.");
+      return;
+    }
+    if (lng !== null && (lng < -180 || lng > 180)) {
+      setFormError("Longitude must be between -180 and 180.");
       return;
     }
 
@@ -511,6 +544,22 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                   onChange={(e) => setField("address", e.target.value)}
                   placeholder="Street address"
                   className={inputClass}
+                />
+              </Field>
+
+              {/* BH-30 — Map location picker */}
+              <Field label="Pin on map (optional)">
+                <DynamicLocationPicker
+                  lat={form.latitude ? Number(form.latitude) : null}
+                  lng={form.longitude ? Number(form.longitude) : null}
+                  onPick={(pickedLat, pickedLng) => {
+                    setField("latitude", String(pickedLat));
+                    setField("longitude", String(pickedLng));
+                  }}
+                  onClear={() => {
+                    setField("latitude", "");
+                    setField("longitude", "");
+                  }}
                 />
               </Field>
             </div>
