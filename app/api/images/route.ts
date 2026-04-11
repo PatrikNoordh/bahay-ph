@@ -58,22 +58,29 @@ export async function POST(request: Request) {
   }
 
   // Verify the agent owns this property
-  const { data: property } = await supabase
+  const { data: property, error: propertyError } = await supabase
     .from("properties")
     .select("id, agent_id")
     .eq("id", body.property_id)
     .single();
 
+  if (propertyError) {
+    return NextResponse.json({ error: propertyError.message }, { status: 500 });
+  }
+
   if (!property) {
     return NextResponse.json({ error: "Property not found" }, { status: 404 });
   }
 
-  const { data: agent } = await supabase
+  const { data: agent, error: agentError } = await supabase
     .from("agents")
     .select("id")
     .eq("user_id", user.id)
     .single();
 
+  if (agentError) {
+    return NextResponse.json({ error: agentError.message }, { status: 500 });
+  }
   if (!agent || property.agent_id !== agent.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
