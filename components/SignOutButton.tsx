@@ -1,11 +1,20 @@
 "use client";
 
 import { signOut } from "@/app/auth/actions";
+import { useSavedStore } from "@/store/useSavedStore";
 
 // AC3 — Sign out clears session and redirects to /profile (guest state)
+// AC8 — Store is cleared immediately on sign out
 export function SignOutButton() {
+  const clear = useSavedStore((state) => state.clear);
+
   return (
-    <form action={signOut}>
+    <form
+      action={async () => {
+        clear();
+        await signOut();
+      }}
+    >
       <button
         type="submit"
         className="w-full bg-white rounded-xl p-4 mb-1.5 flex items-center gap-3 active:scale-[0.98] active:bg-sand-dark transition-all duration-100"
