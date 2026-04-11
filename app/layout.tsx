@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
-import { SavedPropertiesProvider } from "@/hooks/useSavedProperties";
+import { SavedStoreInitializer } from "@/components/SavedStoreInitializer";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -49,9 +49,8 @@ export default function RootLayout({
       className={`${playfair.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="bg-sand text-narra font-body">
-        <SavedPropertiesProvider>
-          <AppShell>{children}</AppShell>
-        </SavedPropertiesProvider>
+        <SavedStoreInitializer />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
