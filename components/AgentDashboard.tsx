@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
-import type { Property, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import { createBrowserClient } from "@supabase/ssr";
+import { ImageUploader } from "@/components/ImageUploader";
+import type { Property, PropertyImage, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
 
 // BH-30 — Leaflet picker is client-only (accesses window)
 const DynamicLocationPicker = dynamic(
@@ -20,6 +22,8 @@ const DynamicLocationPicker = dynamic(
 interface AgentDashboardProps {
   agentId: string;
   initialListings: Property[];
+  /** Primary image URL keyed by property_id — for thumbnail display */
+  initialPrimaryImages: Record<string, string>;
 }
 
 interface FormValues {
@@ -116,8 +120,9 @@ function formFromListing(l: Property): FormValues {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps) {
+export function AgentDashboard({ agentId, initialListings, initialPrimaryImages }: AgentDashboardProps) {
   const [listings, setListings] = useState<Property[]>(initialListings);
+  const [primaryImages, setPrimaryImages] = useState<Record<string, string>>(initialPrimaryImages);
   const [showForm, setShowForm] = useState(false);
   const [editingListing, setEditingListing] = useState<Property | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -125,26 +130,59 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ── Image state ───────────────────────────────────────────────────────────
+  /** Existing images from DB (edit mode) */
+  const [existingImages, setExistingImages] = useState<PropertyImage[]>([]);
+  /** Images marked for deletion (their IDs) */
+  const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
+  /** New local files chosen but not yet uploaded */
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+
   // ── Form open/close ───────────────────────────────────────────────────────
 
   function openAdd() {
     setForm(EMPTY_FORM);
     setEditingListing(null);
     setFormError(null);
+    setExistingImages([]);
+    setRemovedImageIds([]);
+    setPendingFiles([]);
     setShowForm(true);
   }
 
-  function openEdit(listing: Property) {
+  async function openEdit(listing: Property) {
     setForm(formFromListing(listing));
     setEditingListing(listing);
     setFormError(null);
+    setRemovedImageIds([]);
+    setPendingFiles([]);
     setShowForm(true);
+
+    // Fetch existing images for this listing
+    setIsLoadingImages(true);
+    try {
+      const res = await fetch(`/api/images?property_id=${listing.id}`);
+      if (res.ok) {
+        const images = (await res.json()) as PropertyImage[];
+        setExistingImages(images);
+      } else {
+        setExistingImages([]);
+      }
+    } catch {
+      setExistingImages([]);
+    } finally {
+      setIsLoadingImages(false);
+    }
   }
 
   function closeForm() {
     setShowForm(false);
     setEditingListing(null);
     setFormError(null);
+    setExistingImages([]);
+    setRemovedImageIds([]);
+    setPendingFiles([]);
   }
 
   // ── Field helper ─────────────────────────────────────────────────────────
@@ -152,6 +190,90 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  // ── Image helpers ─────────────────────────────────────────────────────────
+
+  function handleAddFiles(files: File[]) {
+    setPendingFiles((prev) => [...prev, ...files]);
+  }
+
+  function handleRemoveExisting(imageId: string) {
+    setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+    setRemovedImageIds((prev) => [...prev, imageId]);
+  }
+
+  function handleRemovePending(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Upload pending files to Supabase Storage and save records to DB.
+   * Returns the public URL of the first uploaded image (for thumbnail update).
+   */
+  const uploadPendingFiles = useCallback(
+    async (propertyId: string, currentImageCount: number): Promise<string | null> => {
+      if (pendingFiles.length === 0) return null;
+
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      let firstUrl: string | null = null;
+
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${propertyId}/${crypto.randomUUID()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("property-images")
+          .upload(path, file, { contentType: file.type });
+
+        if (uploadError) {
+          console.warn("[ImageUpload] Storage upload failed:", uploadError.message);
+          continue;
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("property-images").getPublicUrl(path);
+
+        const isPrimary = currentImageCount === 0 && i === 0;
+
+        const res = await fetch("/api/images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            property_id: propertyId,
+            image_url: publicUrl,
+            is_primary: isPrimary,
+            sort_order: currentImageCount + i,
+          }),
+        });
+
+        if (res.ok && isPrimary) {
+          firstUrl = publicUrl;
+        }
+      }
+
+      return firstUrl;
+    },
+    [pendingFiles]
+  );
+
+  /**
+   * Delete images marked for removal from DB (and Storage via the API).
+   */
+  const deleteRemovedImages = useCallback(async () => {
+    await Promise.all(
+      removedImageIds.map((id) =>
+        fetch(`/api/images/${id}`, { method: "DELETE" }).catch(() => {
+          // Best-effort — log but don't block the save
+          console.warn("[ImageUpload] Failed to delete image", id);
+        })
+      )
+    );
+  }, [removedImageIds]);
 
   // ── Save (add or edit) ────────────────────────────────────────────────────
 
@@ -197,14 +319,43 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
 
       if (!res.ok) {
         setListings(previous); // revert
-        const { error } = await res.json() as { error: string };
+        const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to save. Please try again.");
-        openEdit(editingListing);
+        void openEdit(editingListing);
       } else {
-        const updated = await res.json() as Property;
+        const updated = (await res.json()) as Property;
         setListings((prev) =>
           prev.map((l) => (l.id === updated.id ? updated : l))
         );
+
+        // Handle image changes in parallel
+        const remainingCount = existingImages.length; // after UI removals
+        await Promise.all([
+          deleteRemovedImages(),
+          uploadPendingFiles(editingListing.id, remainingCount).then((newPrimaryUrl) => {
+            if (newPrimaryUrl) {
+              setPrimaryImages((prev) => ({ ...prev, [editingListing.id]: newPrimaryUrl }));
+            }
+            // If we removed the primary image, update thumbnail with new first existing image
+            const hadPrimary = primaryImages[editingListing.id];
+            if (hadPrimary && removedImageIds.some((id) =>
+              existingImages.find((img) => img.id === id && img.is_primary)
+            )) {
+              const nextPrimary = existingImages.find(
+                (img) => !removedImageIds.includes(img.id)
+              );
+              if (nextPrimary) {
+                setPrimaryImages((prev) => ({ ...prev, [editingListing.id]: nextPrimary.image_url }));
+              } else if (!newPrimaryUrl) {
+                setPrimaryImages((prev) => {
+                  const next = { ...prev };
+                  delete next[editingListing.id];
+                  return next;
+                });
+              }
+            }
+          }),
+        ]);
       }
     } else {
       // Optimistic add with temp id
@@ -221,45 +372,64 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
 
       if (!res.ok) {
         setListings((prev) => prev.filter((l) => l.id !== tempId)); // revert
-        const { error } = await res.json() as { error: string };
+        const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to create listing.");
         openAdd();
       } else {
-        const created = await res.json() as Property;
+        const created = (await res.json()) as Property;
         setListings((prev) => prev.map((l) => (l.id === tempId ? created : l)));
+
+        // Upload images now that we have a real property_id
+        const primaryUrl = await uploadPendingFiles(created.id, 0);
+        if (primaryUrl) {
+          setPrimaryImages((prev) => ({ ...prev, [created.id]: primaryUrl }));
+        }
       }
     }
 
     setIsSaving(false);
-  }, [form, agentId, editingListing, listings]);
+  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, uploadPendingFiles, primaryImages]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
-  const handleDelete = useCallback(async (id: string) => {
-    const previous = listings;
-    setListings((prev) => prev.filter((l) => l.id !== id)); // optimistic
-    setConfirmDeleteId(null);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const previous = listings;
+      setListings((prev) => prev.filter((l) => l.id !== id)); // optimistic
+      setConfirmDeleteId(null);
 
-    const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      setListings(previous); // revert
-    }
-  }, [listings]);
+      const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        setListings(previous); // revert
+      } else {
+        // Remove thumbnail entry
+        setPrimaryImages((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    },
+    [listings]
+  );
 
   // ── Status change ─────────────────────────────────────────────────────────
 
-  const handleStatusChange = useCallback(async (id: string, status: PropertyStatus) => {
-    const previous = listings;
-    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
+  const handleStatusChange = useCallback(
+    async (id: string, status: PropertyStatus) => {
+      const previous = listings;
+      setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
 
-    const res = await fetch(`/api/listings/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+      const res = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
 
-    if (!res.ok) setListings(previous); // revert
-  }, [listings]);
+      if (!res.ok) setListings(previous); // revert
+    },
+    [listings]
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -302,60 +472,71 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
       ) : (
         // AC3 — Listing rows
         <div className="px-4 flex flex-col gap-3">
-          {listings.map((listing) => (
-            <div
-              key={listing.id}
-              className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-3 flex gap-3"
-            >
-              {/* Thumbnail placeholder */}
-              <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center">
-                <span className="text-2xl" aria-hidden="true">🏠</span>
-                {/* TODO: show primary property_image thumbnail (BH-18) */}
-              </div>
+          {listings.map((listing) => {
+            const thumbUrl = primaryImages[listing.id] ?? null;
+            return (
+              <div
+                key={listing.id}
+                className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-3 flex gap-3"
+              >
+                {/* AC6 (BH-40) — primary image thumbnail */}
+                <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {thumbUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={thumbUrl}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl" aria-hidden="true">🏠</span>
+                  )}
+                </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-narra truncate">{listing.title}</p>
-                <p className="text-xs text-primary font-medium mt-0.5">
-                  {formatPrice(listing.price, listing.price_type)}
-                </p>
-                <p className="text-[10px] text-muted mt-0.5">{listing.city}</p>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-narra truncate">{listing.title}</p>
+                  <p className="text-xs text-primary font-medium mt-0.5">
+                    {formatPrice(listing.price, listing.price_type)}
+                  </p>
+                  <p className="text-[10px] text-muted mt-0.5">{listing.city}</p>
 
-                {/* AC8 — Status selector */}
-                <select
-                  value={listing.status}
-                  onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
-                  className={`mt-1.5 text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer ${statusBadgeClass(listing.status)}`}
-                >
-                  {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* AC8 — Status selector */}
+                  <select
+                    value={listing.status}
+                    onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
+                    className={`mt-1.5 text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer ${statusBadgeClass(listing.status)}`}
+                  >
+                    {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
+                      <option key={s} value={s}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openEdit(listing)}
-                  className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
-                  aria-label={`Edit ${listing.title}`}
-                >
-                  ✏️
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(listing.id)}
-                  className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
-                  aria-label={`Delete ${listing.title}`}
-                >
-                  🗑️
-                </button>
+                {/* Actions */}
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(listing)}
+                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
+                    aria-label={`Edit ${listing.title}`}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(listing.id)}
+                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
+                    aria-label={`Delete ${listing.title}`}
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -367,7 +548,7 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
               Delete listing?
             </p>
             <p className="text-sm text-muted mb-5">
-              This action cannot be undone.
+              This action cannot be undone. All photos will also be removed.
             </p>
             <div className="flex gap-3">
               <button
@@ -379,7 +560,7 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
               </button>
               <button
                 type="button"
-                onClick={() => handleDelete(confirmDeleteId)}
+                onClick={() => void handleDelete(confirmDeleteId)}
                 className="flex-1 bg-primary text-white text-sm font-medium rounded-[12px] py-3 active:scale-[0.97] transition-transform duration-100"
               >
                 Delete
@@ -415,6 +596,21 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                   {formError}
                 </div>
               )}
+
+              {/* AC1 — Photo upload (AC2: first photo is primary) */}
+              <Field label="Photos (up to 10)">
+                {isLoadingImages ? (
+                  <div className="w-full h-20 rounded-[12px] bg-sand-dark animate-pulse" />
+                ) : (
+                  <ImageUploader
+                    existingImages={existingImages}
+                    pendingFiles={pendingFiles}
+                    onAddFiles={handleAddFiles}
+                    onRemoveExisting={handleRemoveExisting}
+                    onRemovePending={handleRemovePending}
+                  />
+                )}
+              </Field>
 
               <Field label="Title *">
                 <input
@@ -568,7 +764,7 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
             <div className="px-5 py-4 border-t border-sand-dark flex-shrink-0">
               <button
                 type="button"
-                onClick={handleSave}
+                onClick={() => void handleSave()}
                 disabled={isSaving}
                 className="w-full bg-primary text-white font-medium text-sm rounded-[12px] py-3.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60"
               >
