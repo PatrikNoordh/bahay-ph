@@ -17,6 +17,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: 450,
     location: "Punta Engano, Lapu-Lapu City",
     img: "img-placeholder-1",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -52,6 +53,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: 200,
     location: "Pilipog, Cordova",
     img: "img-placeholder-2",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -87,6 +89,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: null,
     location: "Apas, Cebu City",
     img: "img-placeholder-3",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -122,6 +125,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: 200,
     location: "Bakilid, Mandaue City",
     img: "img-placeholder-4",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -157,6 +161,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: null,
     location: "Cebu IT Park, Cebu City",
     img: "img-placeholder-5",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -192,6 +197,7 @@ export const MOCK_LISTINGS: Listing[] = [
     lot: 80,
     location: "San Isidro, Talisay City",
     img: "img-placeholder-6",
+    image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
     agent: {
       name: "Maria Reyes",
       initials: "MR",

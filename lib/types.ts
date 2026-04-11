@@ -114,7 +114,9 @@ export interface Listing {
   area: number | null;   // floor_area in m²
   lot: number | null;    // lot_size in m²
   location: string;      // "Barangay, City"
-  img: string;           // Tailwind gradient class for placeholder image
+  img: string;           // Tailwind gradient class — fallback when image_url is null
+  // TODO: connect to Supabase — populated from property_images (is_primary = true)
+  image_url: string | null;
   agent: ListingAgent;
   description: string;
   features: string[];
