@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
@@ -15,7 +16,9 @@ const DynamicMiniMap = dynamic(
   }
 );
 
-// TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
+// Sand-colored 1×1 SVG blur placeholder matching the Bahay.ph design system
+const SAND_BLUR =
+  "data:image/svg+xml;base64,PHN2Zz48cmVjdCBmaWxsPSIjRjhGM0VDIiBpZHRoaD0iMSIgaGVpZ2h0PSIxIi8+PC9zdmc+";
 
 interface PropertyDetailPageProps {
   listing: Listing | null;
@@ -85,8 +88,20 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
     <>
       {/* ── Scrollable content (flex-1 so CTA bar sits below) ── */}
       <div className="flex-1 overflow-y-auto">
-        {/* AC1 — Hero image: 280px tall gradient placeholder */}
-        <div className={`relative h-[280px] w-full ${listing.img}`}>
+        {/* AC1 — Hero image: 280px tall; next/image when URL available, gradient fallback otherwise */}
+        <div className={`relative h-[280px] w-full ${listing.image_url ? "bg-sand" : listing.img}`}>
+          {listing.image_url && (
+            <Image
+              src={listing.image_url}
+              alt={listing.name}
+              fill
+              sizes="100vw"
+              className="object-cover"
+              placeholder="blur"
+              blurDataURL={SAND_BLUR}
+              priority
+            />
+          )}
           {/* AC1 — gradient overlay on bottom half */}
           <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30" />
 
