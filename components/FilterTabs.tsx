@@ -1,21 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PropertyCard } from "./PropertyCard";
 import type { Listing } from "@/lib/types";
 
 const TABS = ["All", "For Sale", "For Rent", "Lots", "Condos"] as const;
 type Tab = (typeof TABS)[number];
 
+// Map each tab to the URL params it represents
+const TAB_PARAMS: Record<Tab, { listingType?: string; type?: string }> = {
+  All:        {},
+  "For Sale": { listingType: "sale" },
+  "For Rent": { listingType: "rent" },
+  Lots:       { type: "lot" },
+  Condos:     { type: "condo" },
+};
+
+// Derive the active tab from current URL params
+function tabFromParams(
+  listingType: string | null,
+  type: string | null
+): Tab {
+  if (listingType === "sale") return "For Sale";
+  if (listingType === "rent") return "For Rent";
+  if (type === "lot") return "Lots";
+  if (type === "condo") return "Condos";
+  return "All";
+}
+
 interface FilterTabsProps {
   listings: Listing[];
 }
 
-// AC5 — client component for filter tabs + grid; extracted so page stays a Server Component (Phase 2)
+// AC5 — Client Component; tab state synced to URL params via router.replace()
 export function FilterTabs({ listings }: FilterTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("All");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // TODO: connect to Supabase — filter database results by tab (Phase 2 — AC13)
+  // AC2 — Restore active tab from URL on mount
+  const activeTab = tabFromParams(
+    searchParams.get("listingType"),
+    searchParams.get("type")
+  );
+
+  // AC1, AC3 — Write tab selection to URL; replace (not push) to avoid back-stack pollution
+  function selectTab(tab: Tab) {
+    const params = new URLSearchParams(searchParams.toString());
+    // Clear both tab-related params before applying new ones
+    params.delete("listingType");
+    params.delete("type");
+
+    const tabParams = TAB_PARAMS[tab];
+    if (tabParams.listingType) params.set("listingType", tabParams.listingType);
+    if (tabParams.type) params.set("type", tabParams.type);
+
+    const qs = params.toString();
+    // AC4/AC5 — Empty/default filters produce a clean URL
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Client-side filter for the home page "New Listings" section
+  // TODO: connect to Supabase — replace with server-filtered props (Phase 2)
   const filtered = listings.filter((l) => {
     if (activeTab === "All") return true;
     if (activeTab === "For Sale") return l.badge === "For Sale" || l.badge === "New";
@@ -27,13 +73,13 @@ export function FilterTabs({ listings }: FilterTabsProps) {
 
   return (
     <div>
-      {/* Filter tab row */}
+      {/* AC1 — Tab row; active tab highlighted, click updates URL */}
       <div className="flex overflow-x-auto gap-2 px-4 pb-2 no-scrollbar">
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => selectTab(tab)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 ${
               activeTab === tab
                 ? "bg-primary text-white"
