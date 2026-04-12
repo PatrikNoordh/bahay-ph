@@ -129,6 +129,9 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   const [form, setForm] = useState<FormValues>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // AC5 — per-row loading state for status change and delete
+  const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // ── Image state ───────────────────────────────────────────────────────────
   /** Existing images from DB (edit mode) */
@@ -395,6 +398,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   const handleDelete = useCallback(
     async (id: string) => {
       const previous = listings;
+      setDeletingId(id);
       setListings((prev) => prev.filter((l) => l.id !== id)); // optimistic
       setConfirmDeleteId(null);
 
@@ -409,6 +413,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
           return next;
         });
       }
+      setDeletingId(null);
     },
     [listings]
   );
@@ -418,6 +423,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   const handleStatusChange = useCallback(
     async (id: string, status: PropertyStatus) => {
       const previous = listings;
+      setStatusChangingId(id);
       setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
 
       const res = await fetch(`/api/listings/${id}`, {
@@ -427,6 +433,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
       });
 
       if (!res.ok) setListings(previous); // revert
+      setStatusChangingId(null);
     },
     [listings]
   );
@@ -501,18 +508,24 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                   </p>
                   <p className="text-[10px] text-muted mt-0.5">{listing.city}</p>
 
-                  {/* AC8 — Status selector */}
-                  <select
-                    value={listing.status}
-                    onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
-                    className={`mt-1.5 text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer ${statusBadgeClass(listing.status)}`}
-                  >
-                    {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
-                      <option key={s} value={s}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                  {/* AC8 — Status selector; AC5 — spinner while saving */}
+                  <div className="relative mt-1.5 inline-flex items-center">
+                    <select
+                      value={listing.status}
+                      disabled={statusChangingId === listing.id}
+                      onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
+                      className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer transition-opacity ${statusBadgeClass(listing.status)} ${statusChangingId === listing.id ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
+                        <option key={s} value={s}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    {statusChangingId === listing.id && (
+                      <span className="ml-1 w-2.5 h-2.5 border border-muted border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -528,10 +541,15 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteId(listing.id)}
-                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
+                    disabled={deletingId === listing.id}
+                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100 disabled:opacity-50"
                     aria-label={`Delete ${listing.title}`}
                   >
-                    🗑️
+                    {deletingId === listing.id ? (
+                      <span className="w-3.5 h-3.5 border border-muted border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                    ) : (
+                      "🗑️"
+                    )}
                   </button>
                 </div>
               </div>
