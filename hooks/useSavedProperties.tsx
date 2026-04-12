@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useSavedStore } from "@/store/useSavedStore";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Per-property hook used by PropertyCard (all variants).
@@ -15,13 +16,19 @@ export function useSavedProperty(propertyId: string) {
   const router = useRouter();
   const savedMap = useSavedStore((state) => state.savedMap);
   const toggleSaved = useSavedStore((state) => state.toggleSaved);
+  const { showToast } = useToast();
 
   const isSaved = Boolean(savedMap[propertyId]);
 
   const toggle = async () => {
+    const wasSaved = isSaved;
     const result = await toggleSaved(propertyId);
     if (result === "unauthorized") {
       router.push("/auth");
+    } else if (result === "error") {
+      showToast("Failed to update saved properties.", "error");
+    } else {
+      showToast(wasSaved ? "Removed from saved." : "Property saved!", "success");
     }
   };
 

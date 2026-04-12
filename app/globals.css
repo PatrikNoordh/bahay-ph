@@ -55,6 +55,22 @@ body {
   }
 }
 
+/* ── Toast slide-down animation ──────────────────────────── */
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-toast-in {
+  animation: toastIn 200ms ease-out both;
+}
+
 /* ── Custom delay utilities ──────────────────────────────── */
 @utility delay-50 {
   animation-delay: 50ms;

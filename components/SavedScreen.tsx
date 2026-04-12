@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import type { Property } from "@/lib/types";
+import { useToast } from "@/components/ui/Toast";
 
 export interface SavedItem {
   savedId: string;
@@ -123,6 +124,7 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
   const [items, setItems] = useState<SavedItem[]>(initialItems);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleRemove = useCallback(async (savedId: string) => {
     // Optimistic remove
@@ -155,6 +157,9 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
           return next;
         });
         setError("Failed to remove. Please try again.");
+        showToast("Failed to remove property.", "error");
+      } else {
+        showToast("Property removed from saved.", "success");
       }
     } catch {
       // Revert on network error
@@ -165,8 +170,9 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
         return next;
       });
       setError("Failed to remove. Please try again.");
+      showToast("Failed to remove property.", "error");
     }
-  }, [items]);
+  }, [items, showToast]);
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain">
