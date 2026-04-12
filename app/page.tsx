@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { MOCK_LISTINGS } from "@/lib/mockListings";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -133,9 +134,12 @@ export default function Home() {
             See all
           </Link>
         </div>
-        {/* AC5 — FilterTabs is a Client Component; handles tab state + filtered grid */}
+        {/* AC5 — FilterTabs is a Client Component; tab state synced to URL params */}
         {/* TODO: connect to Supabase — show 6 most recent (Phase 2 — AC14) */}
-        <FilterTabs listings={MOCK_LISTINGS} />
+        {/* Suspense required because FilterTabs uses useSearchParams() */}
+        <Suspense fallback={<div className="h-[200px] bg-sand animate-pulse rounded-[14px] mx-4" />}>
+          <FilterTabs listings={MOCK_LISTINGS} />
+        </Suspense>
       </AnimateIn>
     </div>
   );
