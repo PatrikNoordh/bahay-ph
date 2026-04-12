@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { createBrowserClient } from "@supabase/ssr";
 import { ImageUploader } from "@/components/ImageUploader";
+import { useToast } from "@/components/ui/Toast";
 import type { Property, PropertyImage, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
 
 // BH-30 — Leaflet picker is client-only (accesses window)
@@ -132,6 +133,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   // AC5 — per-row loading state for status change and delete
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   // ── Image state ───────────────────────────────────────────────────────────
   /** Existing images from DB (edit mode) */
@@ -324,9 +326,11 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
         setListings(previous); // revert
         const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to save. Please try again.");
+        showToast(error ?? "Failed to save listing.", "error");
         void openEdit(editingListing);
       } else {
         const updated = (await res.json()) as Property;
+        showToast("Listing updated successfully.", "success");
         setListings((prev) =>
           prev.map((l) => (l.id === updated.id ? updated : l))
         );
@@ -377,9 +381,11 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
         setListings((prev) => prev.filter((l) => l.id !== tempId)); // revert
         const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to create listing.");
+        showToast(error ?? "Failed to create listing.", "error");
         openAdd();
       } else {
         const created = (await res.json()) as Property;
+        showToast("Listing created successfully.", "success");
         setListings((prev) => prev.map((l) => (l.id === tempId ? created : l)));
 
         // Upload images now that we have a real property_id
@@ -391,7 +397,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
     }
 
     setIsSaving(false);
-  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, uploadPendingFiles, primaryImages]);
+  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, uploadPendingFiles, primaryImages, showToast]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
@@ -405,7 +411,9 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
       const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
       if (!res.ok) {
         setListings(previous); // revert
+        showToast("Failed to delete listing.", "error");
       } else {
+        showToast("Listing deleted.", "success");
         // Remove thumbnail entry
         setPrimaryImages((prev) => {
           const next = { ...prev };
@@ -415,7 +423,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
       }
       setDeletingId(null);
     },
-    [listings]
+    [listings, showToast]
   );
 
   // ── Status change ─────────────────────────────────────────────────────────
@@ -432,10 +440,13 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
         body: JSON.stringify({ status }),
       });
 
-      if (!res.ok) setListings(previous); // revert
+      if (!res.ok) {
+        setListings(previous); // revert
+        showToast("Failed to update status.", "error");
+      }
       setStatusChangingId(null);
     },
-    [listings]
+    [listings, showToast]
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
