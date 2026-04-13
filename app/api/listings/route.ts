@@ -44,6 +44,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required fields: title, price, city, price_type, property_type" }, { status: 400 });
   }
 
+  // AC7 — Server-side validation mirroring client rules
+  const title = body.title.trim();
+  const price = Number(String(body.price).replace(/[₱,\s]/g, ""));
+
+  if (title.length < 5 || title.length > 200) {
+    return NextResponse.json({ error: "Title must be between 5 and 200 characters." }, { status: 400 });
+  }
+  if (isNaN(price) || price < 1000) {
+    return NextResponse.json({ error: "Price must be at least ₱1,000." }, { status: 400 });
+  }
+  if (body.floor_area !== undefined && body.floor_area !== null && body.floor_area !== "") {
+    const fa = Number(body.floor_area);
+    if (isNaN(fa) || fa <= 0) {
+      return NextResponse.json({ error: "Floor area must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.lot_size !== undefined && body.lot_size !== null && body.lot_size !== "") {
+    const ls = Number(body.lot_size);
+    if (isNaN(ls) || ls <= 0) {
+      return NextResponse.json({ error: "Lot size must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.bedrooms !== undefined && body.bedrooms !== null && body.bedrooms !== "") {
+    const bd = Number(body.bedrooms);
+    if (!Number.isInteger(bd) || bd < 0 || bd > 50) {
+      return NextResponse.json({ error: "Bedrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
+  if (body.bathrooms !== undefined && body.bathrooms !== null && body.bathrooms !== "") {
+    const ba = Number(body.bathrooms);
+    if (!Number.isInteger(ba) || ba < 0 || ba > 50) {
+      return NextResponse.json({ error: "Bathrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
+
   const price_period = body.price_type === "rent" ? "monthly" : "total";
 
   const { data, error } = await supabase
@@ -51,7 +86,7 @@ export async function POST(request: Request) {
     .insert({
       title: body.title.trim(),
       description: body.description?.trim() ?? null,
-      price: Number(body.price),
+      price: price,
       price_type: body.price_type,
       price_period,
       property_type: body.property_type,
