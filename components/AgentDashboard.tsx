@@ -45,6 +45,17 @@ interface FormValues {
   longitude: string;
 }
 
+// AC1–AC4 field-level validation errors
+interface FormErrors {
+  title?: string;
+  price?: string;
+  city?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+  floor_area?: string;
+  lot_size?: string;
+}
+
 const EMPTY_FORM: FormValues = {
   title: "",
   description: "",
@@ -82,7 +93,7 @@ function listingFromForm(form: FormValues, agentId: string): Omit<Property, "id"
   return {
     title: form.title.trim(),
     description: form.description.trim() || null,
-    price: Number(form.price),
+    price: Number(stripPriceFormatting(form.price)),
     price_type: form.price_type,
     price_period: form.price_type === "rent" ? "monthly" : "total",
     property_type: form.property_type,
@@ -120,6 +131,80 @@ function formFromListing(l: Property): FormValues {
   };
 }
 
+// ── Validation ───────────────────────────────────────────────────────────────
+
+/** Strip currency formatting so "₱1,200,000" → "1200000" */
+function stripPriceFormatting(value: string): string {
+  return value.replace(/[₱,\s]/g, "");
+}
+
+/** AC1–AC4: Returns field-level errors. Empty object = valid. */
+function validateForm(form: FormValues): FormErrors {
+  const errors: FormErrors = {};
+
+  // AC1 — Title: 5–200 characters
+  const title = form.title.trim();
+  if (title.length > 0 && title.length < 5) {
+    errors.title = "Title must be at least 5 characters.";
+  } else if (title.length > 200) {
+    errors.title = "Title must be 200 characters or fewer.";
+  }
+
+  // AC2 — Price: numeric only, minimum ₱1,000
+  if (form.price !== "") {
+    const rawPrice = stripPriceFormatting(form.price);
+    const price = Number(rawPrice);
+    if (isNaN(price) || rawPrice === "") {
+      errors.price = "Price must be a number.";
+    } else if (price < 1000) {
+      errors.price = "Price must be at least ₱1,000.";
+    }
+  }
+
+  // AC3 — Floor area: positive number only
+  if (form.floor_area !== "") {
+    const fa = Number(form.floor_area);
+    if (isNaN(fa) || fa <= 0) {
+      errors.floor_area = "Floor area must be a positive number.";
+    }
+  }
+
+  // AC3 — Lot size: positive number only
+  if (form.lot_size !== "") {
+    const ls = Number(form.lot_size);
+    if (isNaN(ls) || ls <= 0) {
+      errors.lot_size = "Lot size must be a positive number.";
+    }
+  }
+
+  // AC4 — Bedrooms: 0–50
+  if (form.bedrooms !== "") {
+    const bd = Number(form.bedrooms);
+    if (!Number.isInteger(bd) || bd < 0 || bd > 50) {
+      errors.bedrooms = "Bedrooms must be between 0 and 50.";
+    }
+  }
+
+  // AC4 — Bathrooms: 0–50
+  if (form.bathrooms !== "") {
+    const ba = Number(form.bathrooms);
+    if (!Number.isInteger(ba) || ba < 0 || ba > 50) {
+      errors.bathrooms = "Bathrooms must be between 0 and 50.";
+    }
+  }
+
+  return errors;
+}
+
+/** Returns true if the form is ready to submit (required fields filled, no validation errors) */
+function isFormValid(form: FormValues, errors: FormErrors): boolean {
+  const hasErrors = Object.keys(errors).length > 0;
+  const title = form.title.trim();
+  const rawPrice = stripPriceFormatting(form.price);
+  const hasRequiredFields = title.length >= 5 && rawPrice !== "" && Number(rawPrice) >= 1000 && form.city.trim().length > 0;
+  return hasRequiredFields && !hasErrors;
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function AgentDashboard({ agentId, initialListings, initialPrimaryImages }: AgentDashboardProps) {
@@ -130,6 +215,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormValues>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   // AC5 — per-row loading state for status change and delete
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
@@ -151,6 +237,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
     setForm(EMPTY_FORM);
     setEditingListing(null);
     setFormError(null);
+    setFieldErrors({});
     setExistingImages([]);
     setRemovedImageIds([]);
     setPendingFiles([]);
@@ -158,9 +245,11 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   }
 
   async function openEdit(listing: Property) {
-    setForm(formFromListing(listing));
+    const editForm = formFromListing(listing);
+    setForm(editForm);
     setEditingListing(listing);
     setFormError(null);
+    setFieldErrors(validateForm(editForm));
     setRemovedImageIds([]);
     setPendingFiles([]);
     setShowForm(true);
@@ -194,7 +283,10 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   // ── Field helper ─────────────────────────────────────────────────────────
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const updated = { ...form, [key]: value };
+    setForm(updated);
+    // AC5/AC6 — live validation on every keystroke
+    setFieldErrors(validateForm(updated));
   }
 
   // ── Image helpers ─────────────────────────────────────────────────────────
@@ -284,8 +376,11 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
   // ── Save (add or edit) ────────────────────────────────────────────────────
 
   const handleSave = useCallback(async () => {
-    if (!form.title.trim() || !form.price || !form.city.trim()) {
-      setFormError("Title, price and city are required.");
+    // AC6 — guard against submitting invalid form
+    const errors = validateForm(form);
+    setFieldErrors(errors);
+    if (!isFormValid(form, errors)) {
+      setFormError("Please fix the errors below before saving.");
       return;
     }
 
@@ -643,13 +738,14 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                 )}
               </Field>
 
-              <Field label="Title *">
+              {/* AC1 — Title: 5–200 chars */}
+              <Field label="Title *" error={fieldErrors.title}>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setField("title", e.target.value)}
                   placeholder="e.g. 3BR House in Cebu City"
-                  className={inputClass}
+                  className={fieldErrors.title ? inputErrorClass : inputClass}
                 />
               </Field>
 
@@ -663,15 +759,16 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                 />
               </Field>
 
+              {/* AC2 — Price: numeric, min ₱1,000 */}
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Price (₱) *">
+                <Field label="Price (₱) *" error={fieldErrors.price}>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={form.price}
                     onChange={(e) => setField("price", e.target.value)}
                     placeholder="0"
-                    min="0"
-                    className={inputClass}
+                    className={fieldErrors.price ? inputErrorClass : inputClass}
                   />
                 </Field>
 
@@ -701,45 +798,48 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                 </select>
               </Field>
 
+              {/* AC3 — Floor/lot: positive. AC4 — Beds/baths: 0–50 */}
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Bedrooms">
+                <Field label="Bedrooms" error={fieldErrors.bedrooms}>
                   <input
                     type="number"
                     value={form.bedrooms}
                     onChange={(e) => setField("bedrooms", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    max="50"
+                    className={fieldErrors.bedrooms ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Bathrooms">
+                <Field label="Bathrooms" error={fieldErrors.bathrooms}>
                   <input
                     type="number"
                     value={form.bathrooms}
                     onChange={(e) => setField("bathrooms", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    max="50"
+                    className={fieldErrors.bathrooms ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Floor area (m²)">
+                <Field label="Floor area (m²)" error={fieldErrors.floor_area}>
                   <input
                     type="number"
                     value={form.floor_area}
                     onChange={(e) => setField("floor_area", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    className={fieldErrors.floor_area ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Lot size (m²)">
+                <Field label="Lot size (m²)" error={fieldErrors.lot_size}>
                   <input
                     type="number"
                     value={form.lot_size}
                     onChange={(e) => setField("lot_size", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    className={fieldErrors.lot_size ? inputErrorClass : inputClass}
                   />
                 </Field>
               </div>
@@ -796,7 +896,7 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={isSaving}
+                disabled={isSaving || !isFormValid(form, fieldErrors)}
                 className="w-full bg-primary text-white font-medium text-sm rounded-[12px] py-3.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60"
               >
                 {isSaving ? "Saving…" : editingListing ? "Save changes" : "Create listing"}
@@ -814,11 +914,17 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
 const inputClass =
   "w-full bg-sand rounded-[12px] px-3 py-2.5 text-sm text-narra placeholder:text-muted outline-none focus:ring-2 focus:ring-primary/30";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+const inputErrorClass =
+  "w-full bg-sand rounded-[12px] px-3 py-2.5 text-sm text-narra placeholder:text-muted outline-none focus:ring-2 focus:ring-primary/30 ring-2 ring-primary/50";
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted mb-1">{label}</p>
       {children}
+      {error && (
+        <p className="text-xs text-primary mt-1" role="alert">{error}</p>
+      )}
     </div>
   );
 }

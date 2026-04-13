@@ -35,11 +35,49 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     status?: PropertyStatus;
   };
 
+  // AC7 — Server-side validation mirroring client rules (only validate fields present in body)
+  if (body.title !== undefined) {
+    const title = body.title.trim();
+    if (title.length < 5 || title.length > 200) {
+      return NextResponse.json({ error: "Title must be between 5 and 200 characters." }, { status: 400 });
+    }
+  }
+  if (body.price !== undefined) {
+    const price = Number(String(body.price).replace(/[₱,\s]/g, ""));
+    if (isNaN(price) || price < 1000) {
+      return NextResponse.json({ error: "Price must be at least ₱1,000." }, { status: 400 });
+    }
+  }
+  if (body.floor_area !== undefined && body.floor_area !== null && body.floor_area !== "") {
+    const fa = Number(body.floor_area);
+    if (isNaN(fa) || fa <= 0) {
+      return NextResponse.json({ error: "Floor area must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.lot_size !== undefined && body.lot_size !== null && body.lot_size !== "") {
+    const ls = Number(body.lot_size);
+    if (isNaN(ls) || ls <= 0) {
+      return NextResponse.json({ error: "Lot size must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.bedrooms !== undefined && body.bedrooms !== null && body.bedrooms !== "") {
+    const bd = Number(body.bedrooms);
+    if (!Number.isInteger(bd) || bd < 0 || bd > 50) {
+      return NextResponse.json({ error: "Bedrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
+  if (body.bathrooms !== undefined && body.bathrooms !== null && body.bathrooms !== "") {
+    const ba = Number(body.bathrooms);
+    if (!Number.isInteger(ba) || ba < 0 || ba > 50) {
+      return NextResponse.json({ error: "Bathrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
+
   // Build update payload — only include fields present in the request body
   const update: Record<string, unknown> = {};
   if (body.title !== undefined) update.title = body.title.trim();
   if (body.description !== undefined) update.description = body.description?.trim() ?? null;
-  if (body.price !== undefined) update.price = Number(body.price);
+  if (body.price !== undefined) update.price = Number(String(body.price).replace(/[₱,\s]/g, ""));
   if (body.price_type !== undefined) {
     update.price_type = body.price_type;
     update.price_period = body.price_type === "rent" ? "monthly" : "total";
