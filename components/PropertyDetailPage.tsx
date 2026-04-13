@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
@@ -31,6 +31,24 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
   const { isSaved, toggle } = useSavedProperty(listing?.id ?? "");
   // BH-39 — track avatar load failure for 404 fallback
   const [avatarError, setAvatarError] = useState(false);
+  // AC1–AC4 — Carousel state
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // AC1/AC2 — track scroll position to derive active dot index
+  const handleCarouselScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollLeft / el.offsetWidth);
+    setActiveIndex(index);
+  }, []);
+
+  // AC3 — open lightbox at current index
+  const openLightbox = useCallback((index: number) => {
+    setActiveIndex(index);
+    setLightboxOpen(true);
+  }, []);
 
   // ── 404 fallback — unknown ID (edge case) ──────────────────
   if (!listing) {
@@ -91,46 +109,179 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
     <>
       {/* ── Scrollable content (flex-1 so CTA bar sits below) ── */}
       <div className="flex-1 overflow-y-auto">
-        {/* AC1 — Hero image: 280px tall; next/image when URL available, gradient fallback otherwise */}
-        <div className={`relative h-[280px] w-full ${listing.image_url ? "bg-sand" : listing.img}`}>
-          {listing.image_url && (
-            <Image
-              src={listing.image_url}
-              alt={listing.name}
-              fill
-              sizes="100vw"
-              className="object-cover"
-              placeholder="blur"
-              blurDataURL={SAND_BLUR}
-              priority
-            />
-          )}
-          {/* AC1 — gradient overlay on bottom half */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30" />
+        {/* AC1–AC5 — Image carousel */}
+        {(() => {
+          const images = listing.images.length > 0
+            ? listing.images
+            : listing.image_url
+            ? [listing.image_url]
+            : [];
+          const hasMultiple = images.length > 1;
 
-          {/* AC2 — Overlay topbar: back + heart */}
-          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-            <button
-              type="button"
-              aria-label="Go back"
-              onClick={() => router.back()}
-              className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
-            >
-              <span className="text-narra text-base leading-none">←</span>
-            </button>
+          return (
+            <div className="relative h-[280px] w-full">
+              {images.length > 0 ? (
+                <>
+                  {/* AC4 — CSS scroll snap carousel, swipeable on mobile */}
+                  <div
+                    ref={scrollRef}
+                    onScroll={handleCarouselScroll}
+                    className="flex h-full overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                  >
+                    {images.map((url, i) => (
+                      <button
+                        key={url}
+                        type="button"
+                        aria-label={`View photo ${i + 1} of ${images.length}`}
+                        onClick={() => openLightbox(i)}
+                        className="relative flex-shrink-0 w-full h-full snap-center snap-always focus:outline-none"
+                      >
+                        <Image
+                          src={url}
+                          alt={`${listing.name} — photo ${i + 1}`}
+                          fill
+                          sizes="100vw"
+                          className="object-cover"
+                          placeholder="blur"
+                          blurDataURL={SAND_BLUR}
+                          priority={i === 0}
+                        />
+                      </button>
+                    ))}
+                  </div>
 
-            <button
-              type="button"
-              aria-label={isSaved ? "Remove from saved" : "Save property"}
-              onClick={() => void toggle()}
-              className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
-            >
-              <span aria-hidden="true" className="text-base leading-none">
-                {isSaved ? "❤️" : "🤍"}
+                  {/* AC1 — gradient overlay on bottom half */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30" />
+
+                  {/* AC2 — dot indicators (only when multiple images) */}
+                  {hasMultiple && (
+                    <div className="pointer-events-none absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+                      {images.map((_, i) => (
+                        <span
+                          key={i}
+                          className={`block rounded-full transition-all duration-200 ${
+                            i === activeIndex
+                              ? "w-4 h-1.5 bg-white"
+                              : "w-1.5 h-1.5 bg-white/60"
+                          }`}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* AC5 — gradient placeholder when no images */
+                <div className={`absolute inset-0 ${listing.img}`} />
+              )}
+
+              {/* AC2 — Overlay topbar: back + heart */}
+              <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  aria-label="Go back"
+                  onClick={() => router.back()}
+                  className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
+                >
+                  <span className="text-narra text-base leading-none">←</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-label={isSaved ? "Remove from saved" : "Save property"}
+                  onClick={() => void toggle()}
+                  className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {isSaved ? "❤️" : "🤍"}
+                  </span>
+                </button>
+              </div>
+
+              {/* AC2 — photo count badge (top-right, when multiple) */}
+              {hasMultiple && (
+                <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[11px] font-medium rounded-full px-2.5 py-1 backdrop-blur-sm">
+                  {activeIndex + 1} / {images.length}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* AC3 — Fullscreen lightbox */}
+        {lightboxOpen && listing.images.length > 0 && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Photo gallery"
+            className="fixed inset-0 z-[100] bg-black flex flex-col"
+          >
+            {/* Lightbox header */}
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+              <span className="text-white/70 text-sm">
+                {activeIndex + 1} / {listing.images.length}
               </span>
-            </button>
+              <button
+                type="button"
+                aria-label="Close gallery"
+                onClick={() => setLightboxOpen(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-colors"
+              >
+                <span className="text-white text-lg leading-none">✕</span>
+              </button>
+            </div>
+
+            {/* Lightbox carousel — same scroll snap pattern */}
+            <div
+              className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                setActiveIndex(Math.round(el.scrollLeft / el.offsetWidth));
+              }}
+              ref={(el) => {
+                // Scroll lightbox to active index on open
+                if (el && el.scrollLeft === 0 && activeIndex > 0) {
+                  el.scrollLeft = activeIndex * el.offsetWidth;
+                }
+              }}
+            >
+              {listing.images.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative flex-shrink-0 w-full snap-center snap-always flex items-center justify-center"
+                >
+                  <Image
+                    src={url}
+                    alt={`${listing.name} — photo ${i + 1}`}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                    priority={i === activeIndex}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Lightbox dot indicators */}
+            {listing.images.length > 1 && (
+              <div className="flex justify-center gap-1.5 py-4 flex-shrink-0">
+                {listing.images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`block rounded-full transition-all duration-200 ${
+                      i === activeIndex
+                        ? "w-4 h-1.5 bg-white"
+                        : "w-1.5 h-1.5 bg-white/40"
+                    }`}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* ── Content body ─────────────────────────────────── */}
         <div className="px-4 pt-4 pb-6">

@@ -18,6 +18,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "Punta Engano, Lapu-Lapu City",
     img: "img-placeholder-1",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -55,6 +56,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "Pilipog, Cordova",
     img: "img-placeholder-2",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -92,6 +94,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "Apas, Cebu City",
     img: "img-placeholder-3",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -129,6 +132,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "Bakilid, Mandaue City",
     img: "img-placeholder-4",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -166,6 +170,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "Cebu IT Park, Cebu City",
     img: "img-placeholder-5",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",
@@ -203,6 +208,7 @@ export const MOCK_LISTINGS: Listing[] = [
     location: "San Isidro, Talisay City",
     img: "img-placeholder-6",
     image_url: null, // TODO: connect to Supabase — use property_images (is_primary = true)
+    images: [], // TODO: connect to Supabase — all property_images sorted by sort_order
     agent: {
       name: "Maria Reyes",
       initials: "MR",

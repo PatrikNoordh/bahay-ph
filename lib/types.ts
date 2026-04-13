@@ -118,6 +118,8 @@ export interface Listing {
   img: string;           // Tailwind gradient class — fallback when image_url is null
   // TODO: connect to Supabase — populated from property_images (is_primary = true)
   image_url: string | null;
+  // TODO: connect to Supabase — all property_images sorted by sort_order
+  images: string[];      // full ordered list of image URLs for carousel (empty = show placeholder)
   agent: ListingAgent;
   description: string;
   features: string[];
