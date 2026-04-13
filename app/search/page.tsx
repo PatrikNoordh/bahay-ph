@@ -7,6 +7,9 @@ import type { Listing, PropertyType } from "@/lib/types";
 // TODO: connect to Supabase — replace mock filtering with createServerSupabaseClient query
 // e.g. supabase.from("properties").select("*, property_images(*)").eq("type", type)...
 
+// AC1 — 20 results per page
+const PAGE_SIZE = 20;
+
 interface SearchPageProps {
   searchParams: Promise<{
     q?: string;
@@ -17,6 +20,7 @@ interface SearchPageProps {
     beds?: string;
     sort?: string;
     city?: string;
+    page?: string;
   }>;
 }
 
@@ -110,6 +114,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }
   // Default "newest" — MOCK_LISTINGS are already in newest-first order
 
+  // AC1/AC5 — Paginate: ?page=1 shows first PAGE_SIZE, ?page=2 shows 2×PAGE_SIZE, etc.
+  // TODO: connect to Supabase — use .range(0, page * PAGE_SIZE - 1) with count option
+  const totalCount = listings.length;
+  const page = Math.max(1, parseInt(p.page ?? "1", 10));
+  const pagedListings = listings.slice(0, page * PAGE_SIZE);
+
   return (
     <div className="min-h-[100dvh] pb-16">
       {/* AC5 — Topbar with settings icon on right */}
@@ -124,7 +134,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         }
       >
         {/* All search interactivity lives in the Client Component */}
-        <SearchScreen listings={listings} />
+        <SearchScreen listings={pagedListings} totalCount={totalCount} currentPage={page} />
       </Suspense>
     </div>
   );

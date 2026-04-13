@@ -64,10 +64,12 @@ function FilterSelect({ value, options, onChange }: FilterSelectProps) {
 }
 
 interface SearchScreenProps {
-  listings: Listing[]; // Already filtered server-side
+  listings: Listing[]; // Already filtered + paginated server-side
+  totalCount: number;  // AC4 — total matching results across all pages
+  currentPage: number; // AC5 — current page, drives "Load more"
 }
 
-export function SearchScreen({ listings }: SearchScreenProps) {
+export function SearchScreen({ listings, totalCount, currentPage }: SearchScreenProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -83,6 +85,7 @@ export function SearchScreen({ listings }: SearchScreenProps) {
   }, []);
 
   // Build a new URL with one param updated (or removed if value is empty)
+  // AC5 edge case — filter change resets to page 1
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
@@ -90,6 +93,8 @@ export function SearchScreen({ listings }: SearchScreenProps) {
     } else {
       params.delete(key);
     }
+    // Reset to page 1 when any filter changes
+    params.delete("page");
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });
@@ -100,7 +105,7 @@ export function SearchScreen({ listings }: SearchScreenProps) {
     updateParam("q", localQ.trim());
   }
 
-  // Clear every filter and search param
+  // Clear every filter and search param (including page)
   function clearAllFilters() {
     setLocalQ("");
     startTransition(() => {
@@ -165,10 +170,13 @@ export function SearchScreen({ listings }: SearchScreenProps) {
         />
       </div>
 
-      {/* AC4 — Result count */}
+      {/* AC4 — Result count: "Showing N of total properties" */}
       <p className="px-4 mb-3 text-sm text-muted">
-        <span className="font-bold text-narra">{listings.length}</span>{" "}
-        {listings.length === 1 ? "property" : "properties"} found in Cebu
+        Showing{" "}
+        <span className="font-bold text-narra">{listings.length}</span>
+        {" "}of{" "}
+        <span className="font-bold text-narra">{totalCount}</span>{" "}
+        {totalCount === 1 ? "property" : "properties"}
       </p>
 
       {/* AC1 — Skeleton grid while server re-renders on filter change */}
@@ -196,11 +204,33 @@ export function SearchScreen({ listings }: SearchScreenProps) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-          {listings.map((listing) => (
-            <PropertyCard key={listing.id} listing={listing} variant="grid" />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+            {listings.map((listing) => (
+              <PropertyCard key={listing.id} listing={listing} variant="grid" />
+            ))}
+          </div>
+
+          {/* AC2 — "Load more" button; hidden when all results are visible */}
+          {listings.length < totalCount && (
+            <div className="px-4 pb-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("page", String(currentPage + 1));
+                  startTransition(() => {
+                    router.push(`${pathname}?${params.toString()}`);
+                  });
+                }}
+                disabled={isPending}
+                className="bg-primary text-white text-sm font-medium rounded-xl px-6 py-3 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isPending ? "Loading…" : `Load more (${totalCount - listings.length} remaining)`}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

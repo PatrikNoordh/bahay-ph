@@ -136,9 +136,10 @@ export default function Home() {
         </div>
         {/* AC5 — FilterTabs is a Client Component; tab state synced to URL params */}
         {/* TODO: connect to Supabase — show 6 most recent (Phase 2 — AC14) */}
+        {/* AC3 — limit to 12 on home page */}
         {/* Suspense required because FilterTabs uses useSearchParams() */}
         <Suspense fallback={<div className="h-[200px] bg-sand animate-pulse rounded-[14px] mx-4" />}>
-          <FilterTabs listings={MOCK_LISTINGS} />
+          <FilterTabs listings={MOCK_LISTINGS} limit={12} />
         </Suspense>
       </AnimateIn>
     </div>
