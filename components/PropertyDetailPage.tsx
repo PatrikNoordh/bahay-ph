@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
 import { useSavedProperty } from "@/hooks/useSavedProperties";
 import { buildWhatsAppUrl, buildPhoneUrl } from "@/lib/utils";
+import { PropertyCard } from "@/components/PropertyCard";
 
 // AC11 — Mini map is client-only (Leaflet accesses window)
 const DynamicMiniMap = dynamic(
@@ -23,9 +24,10 @@ const SAND_BLUR =
 
 interface PropertyDetailPageProps {
   listing: Listing | null;
+  relatedListings?: Listing[];
 }
 
-export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
+export function PropertyDetailPage({ listing, relatedListings = [] }: PropertyDetailPageProps) {
   const router = useRouter();
   // AC6 — listing.id is stable; hook reads from SavedPropertiesProvider context
   const { isSaved, toggle } = useSavedProperty(listing?.id ?? "");
@@ -462,6 +464,21 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
               )}
             </div>
           </div>
+
+          {/* AC1/AC5 — "More in {city}" related properties section */}
+          {relatedListings.length > 0 && (
+            <div className="mb-4">
+              <h2 className="font-display font-semibold text-sm text-narra mb-3">
+                More in {listing.location.split(", ").at(-1)}
+              </h2>
+              {/* AC3 — 2-column grid using PropertyCard grid variant */}
+              <div className="grid grid-cols-2 gap-3">
+                {relatedListings.map((related) => (
+                  <PropertyCard key={related.id} listing={related} variant="grid" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -4,6 +4,12 @@ import { MOCK_LISTINGS } from "@/lib/mockListings";
 import { PropertyDetailPage } from "@/components/PropertyDetailPage";
 import type { Listing } from "@/lib/types";
 
+// AC4 — derive city from "Barangay, City" location string
+function cityOf(listing: Listing): string {
+  const parts = listing.location.split(", ");
+  return parts.length >= 2 ? parts[parts.length - 1] : listing.location;
+}
+
 // TODO: connect to Supabase — fetch property + agent + images by ID (Phase 2 — AC13)
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bahay.ph";
@@ -71,11 +77,18 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
     notFound();
   }
 
+  // AC2 — up to 4 listings in the same city, excluding current property
+  // TODO: connect to Supabase — replace with: .from("listings").select(...).eq("city", city).neq("id", id).limit(4)
+  const city = cityOf(listing);
+  const relatedListings = MOCK_LISTINGS.filter(
+    (l) => l.id !== id && cityOf(l) === city
+  ).slice(0, 4);
+
   // Nested flex layout: scrollable content + sticky CTA both inside <main>
   // Avoids position:fixed issues inside the AppShell frame on desktop
   return (
     <div className="h-full flex flex-col">
-      <PropertyDetailPage listing={listing} />
+      <PropertyDetailPage listing={listing} relatedListings={relatedListings} />
     </div>
   );
 }
