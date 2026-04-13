@@ -5,6 +5,10 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// BH-46 — marker clustering for dense property areas
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "leaflet.markercluster";
 import type { Listing } from "@/lib/types";
 
 interface LeafletMapProps {
@@ -43,6 +47,8 @@ export function LeafletMap({ listings, selectedId, onPinClick }: LeafletMapProps
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  // BH-46 — cluster group holds all price-chip markers
+  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
 
   // Stable callback ref to avoid re-registering click listeners on every render
   const onPinClickRef = useRef(onPinClick);
@@ -66,30 +72,57 @@ export function LeafletMap({ listings, selectedId, onPinClick }: LeafletMapProps
       maxZoom: 19,
     }).addTo(map);
 
+    // BH-46 AC1/AC2/AC4 — create cluster group with design-token styled cluster icons
+    const cluster = L.markerClusterGroup({
+      // AC2 — clicking cluster zooms to reveal individual pins (default behaviour)
+      showCoverageOnHover: false,
+      // AC4 — terra background (#C1440E) + white text matching design system
+      iconCreateFunction(c) {
+        const count = c.getChildCount();
+        return L.divIcon({
+          className: "leaflet-cluster-icon",
+          iconSize: [40, 40],
+          html: `<div style="
+            width:40px;height:40px;border-radius:50%;
+            background:#C1440E;color:#fff;
+            font-size:13px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 16px rgba(44,26,14,0.18);
+            border:2px solid #fff;
+          ">${count}</div>`,
+        });
+      },
+    });
+
+    cluster.addTo(map);
+    clusterRef.current = cluster;
     mapRef.current = map;
 
     const markers = markersRef.current;
     return () => {
       markers.forEach((m) => m.remove());
       markers.clear();
+      cluster.clearLayers();
       map.remove();
       mapRef.current = null;
+      clusterRef.current = null;
     };
   }, []);
 
   // Add / update markers whenever listings or selectedId change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const cluster = clusterRef.current;
+    if (!map || !cluster) return;
 
     const activeIds = new Set(
       listings.filter((l) => l.lat !== null && l.lng !== null).map((l) => l.id)
     );
 
-    // Remove stale markers
+    // Remove stale markers from cluster + ref
     markersRef.current.forEach((marker, id) => {
       if (!activeIds.has(id)) {
-        marker.remove();
+        cluster.removeLayer(marker);
         markersRef.current.delete(id);
       }
     });
@@ -104,8 +137,10 @@ export function LeafletMap({ listings, selectedId, onPinClick }: LeafletMapProps
       if (existing) {
         existing.setIcon(icon);
       } else {
-        const marker = L.marker([listing.lat, listing.lng], { icon }).addTo(map);
+        // AC3 — single pins remain as price chips (buildIcon unchanged)
+        const marker = L.marker([listing.lat, listing.lng], { icon });
         marker.on("click", () => onPinClickRef.current(listing.id));
+        cluster.addLayer(marker);
         markersRef.current.set(listing.id, marker);
       }
     });
