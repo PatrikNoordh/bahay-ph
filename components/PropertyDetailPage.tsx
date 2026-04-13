@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
@@ -28,6 +29,8 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
   const router = useRouter();
   // AC6 — listing.id is stable; hook reads from SavedPropertiesProvider context
   const { isSaved, toggle } = useSavedProperty(listing?.id ?? "");
+  // BH-39 — track avatar load failure for 404 fallback
+  const [avatarError, setAvatarError] = useState(false);
 
   // ── 404 fallback — unknown ID (edge case) ──────────────────
   if (!listing) {
@@ -212,10 +215,23 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
             {listing.agent ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
-                  {/* AC8 — Initials avatar */}
-                  <div className="w-[52px] h-[52px] rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-lg flex-shrink-0">
-                    {listing.agent.initials}
-                  </div>
+                  {/* BH-39 — Show avatar_url if set and loaded OK, else initials fallback */}
+                  {listing.agent.avatar_url && !avatarError ? (
+                    <div className="w-[48px] h-[48px] rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={listing.agent.avatar_url}
+                        alt={listing.agent.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-full h-full rounded-full"
+                        onError={() => setAvatarError(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-[48px] h-[48px] rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-lg flex-shrink-0">
+                      {listing.agent.initials}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="font-semibold text-sm text-narra leading-tight">
                       {listing.agent.name}
