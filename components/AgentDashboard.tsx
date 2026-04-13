@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useToast } from "@/components/ui/Toast";
@@ -497,14 +498,15 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
                 key={listing.id}
                 className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-3 flex gap-3"
               >
-                {/* AC6 (BH-40) — primary image thumbnail */}
-                <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center">
+                {/* AC1 (BH-40) — primary image thumbnail */}
+                <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                   {thumbUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={thumbUrl}
                       alt={listing.title}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="64px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="text-2xl" aria-hidden="true">🏠</span>
