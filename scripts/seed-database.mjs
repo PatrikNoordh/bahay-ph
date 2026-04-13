@@ -610,7 +610,7 @@ async function main() {
   let skippedCount = 0;
 
   for (const propData of PROPERTIES) {
-    const { _agent, _imageType, ...property } = propData;
+    const { _agent, ...property } = propData;
 
     // Use the property_type for image lookup
     const imageType = property.property_type;
