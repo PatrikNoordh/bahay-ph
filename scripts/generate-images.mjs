@@ -12,7 +12,8 @@
  * Runtime: ~10–20 min for full run (rate-limited to avoid 429s)
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
@@ -156,7 +157,7 @@ const PROMPTS = {
 
 // ─── Image generation ──────────────────────────────────────────────────────────
 
-const MODEL_NAME = "gemini-2.0-flash-preview-image-generation";
+const MODEL_NAME = "gemini-2.5-flash-image";
 
 async function generateImage(prompt, outputPath, retries = 3) {
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
@@ -177,8 +178,27 @@ async function generateImage(prompt, outputPath, retries = 3) {
         throw new Error("No image in response");
       }
 
-      const buffer = Buffer.from(imagePart.inlineData.data, "base64");
+      const raw = imagePart.inlineData.data;
+      if (!raw || raw.length === 0) {
+        throw new Error("Image data is empty (0 bytes from API)");
+      }
+
+      const buffer = Buffer.from(raw, "base64");
+      if (buffer.length < 1024) {
+        throw new Error(`Image suspiciously small (${buffer.length} bytes) — likely not a real image`);
+      }
+
       fs.writeFileSync(outputPath, buffer);
+
+      // Verify the file was actually written
+      if (!fs.existsSync(outputPath)) {
+        throw new Error("File disappeared immediately after writeFileSync!");
+      }
+      const writtenSize = fs.statSync(outputPath).size;
+      if (writtenSize !== buffer.length) {
+        throw new Error(`Size mismatch: wrote ${buffer.length} but file is ${writtenSize} bytes`);
+      }
+
       return true;
     } catch (err) {
       const isLast = attempt === retries;
@@ -256,11 +276,24 @@ async function main() {
   const manifestPath = path.join(OUTPUT_DIR, "manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
+  // Final verification — are the files actually on disk?
+  const filesOnDisk = fs.readdirSync(OUTPUT_DIR).filter((f) => f.endsWith(".jpg"));
+  const totalSize = filesOnDisk.reduce((sum, f) => sum + fs.statSync(path.join(OUTPUT_DIR, f)).size, 0);
+
   console.log("\n─────────────────────────────────────");
   console.log(`✅  Generated : ${total}`);
   console.log(`⏭️  Skipped   : ${skipped}`);
   console.log(`❌  Failed    : ${failed}`);
+  console.log(`📁  On disk   : ${filesOnDisk.length} JPGs (${(totalSize / 1024 / 1024).toFixed(1)} MB)`);
   console.log(`📄  Manifest  : ${manifestPath}`);
+
+  if (filesOnDisk.length === 0 && total > 0) {
+    console.error("\n⚠️  WARNING: Script reported success but no JPGs found on disk!");
+    console.error("    Something on your system is deleting the files.");
+    console.error("    Check antivirus / macOS security settings.");
+    process.exit(1);
+  }
+
   console.log("\nNext step: node scripts/seed-database.mjs");
 }
 

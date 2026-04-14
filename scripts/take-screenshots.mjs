@@ -15,7 +15,8 @@
  * add SCREENSHOT_SESSION_TOKEN to .env.local (see comments below).
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import puppeteer from "puppeteer";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
