@@ -1,58 +1,75 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing, buildImageMap, buildAgentMap } from "@/lib/listingHelpers";
 import { PropertyDetailPage } from "@/components/PropertyDetailPage";
-import type { Listing } from "@/lib/types";
-
-// AC4 — derive city from "Barangay, City" location string
-function cityOf(listing: Listing): string {
-  const parts = listing.location.split(", ");
-  return parts.length >= 2 ? parts[parts.length - 1] : listing.location;
-}
-
-// TODO: connect to Supabase — fetch property + agent + images by ID (Phase 2 — AC13)
+import type { Property, PropertyImage, Agent } from "@/lib/types";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bahay.ph";
-// TODO: connect to Supabase — replace with real OG image from property_images (is_primary = true)
 const DEFAULT_OG_IMAGE = `${SITE_URL}/icon-512.png`;
 
 interface PropertyPageProps {
   params: Promise<{ id: string }>;
 }
 
-function buildMetaDescription(listing: Listing): string {
-  const [barangay, city] = listing.location.split(", ");
-  const beds = listing.beds != null ? `${listing.beds} bed, ` : "";
-  const area = listing.area != null ? `${listing.area}sqm. ` : "";
-  const desc = `${beds}${area}${listing.price} in ${barangay}, ${city}.`;
-  return desc.length > 160 ? desc.slice(0, 157) + "..." : desc;
+async function fetchProperty(id: string) {
+  const supabase = await createServerSupabaseClient();
+
+  const { data: prop, error } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !prop) return null;
+
+  const property = prop as Property;
+
+  const { data: imageRows } = await supabase
+    .from("property_images")
+    .select("*")
+    .eq("property_id", id)
+    .order("sort_order", { ascending: true });
+
+  const images = (imageRows ?? []) as PropertyImage[];
+
+  const agent = property.agent_id
+    ? await supabase
+        .from("agents")
+        .select("*")
+        .eq("id", property.agent_id)
+        .single()
+        .then(({ data }) => (data as Agent | null))
+    : null;
+
+  return { property, images, agent };
 }
 
-export async function generateMetadata({
-  params,
-}: PropertyPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { id } = await params;
+  const result = await fetchProperty(id);
 
-  // TODO: connect to Supabase — replace MOCK_LISTINGS lookup with server client query
-  const listing = MOCK_LISTINGS.find((l) => l.id === id) ?? null;
-
-  if (!listing) {
+  if (!result) {
     return {
       title: "Property Not Found | Bahay.ph",
       description: "Find verified property listings in Cebu on Bahay.ph.",
     };
   }
 
-  const [, city] = listing.location.split(", ");
-  const title = `${listing.name} — ${city} | Bahay.ph`;
-  const description = buildMetaDescription(listing);
+  const { property, images, agent } = result;
+  const listing = propertyToListing(property, images, agent);
+
+  const title = `${listing.name} — ${property.city} | Bahay.ph`;
+  const bedsStr = listing.beds != null ? `${listing.beds} bed, ` : "";
+  const areaStr = listing.area != null ? `${listing.area}sqm. ` : "";
+  const description = `${bedsStr}${areaStr}${listing.price} in ${listing.location}.`;
   const canonicalUrl = `${SITE_URL}/property/${id}`;
-  // TODO: connect to Supabase — use primary property_images[0].image_url when available
-  const ogImage = DEFAULT_OG_IMAGE;
+  const primaryImage = images.find((img) => img.is_primary);
+  const ogImage = primaryImage?.image_url ?? DEFAULT_OG_IMAGE;
 
   return {
     title,
-    description,
+    description: description.length > 160 ? description.slice(0, 157) + "..." : description,
     openGraph: {
       title,
       description,
@@ -68,24 +85,51 @@ export async function generateMetadata({
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { id } = await params;
+  const result = await fetchProperty(id);
 
-  // TODO: replace with Supabase server query (Phase 2 — AC13)
-  // When connecting to Supabase: distinguish network errors (throw) from missing records (notFound())
-  const listing = MOCK_LISTINGS.find((l) => l.id === id) ?? null;
-
-  if (!listing) {
+  if (!result) {
     notFound();
   }
 
-  // AC2 — up to 4 listings in the same city, excluding current property
-  // TODO: connect to Supabase — replace with: .from("listings").select(...).eq("city", city).neq("id", id).limit(4)
-  const city = cityOf(listing);
-  const relatedListings = MOCK_LISTINGS.filter(
-    (l) => l.id !== id && cityOf(l) === city
-  ).slice(0, 4);
+  const { property, images, agent } = result;
+  const listing = propertyToListing(property, images, agent);
 
-  // Nested flex layout: scrollable content + sticky CTA both inside <main>
-  // Avoids position:fixed issues inside the AppShell frame on desktop
+  // Fetch up to 4 related listings in the same city, excluding current property
+  const supabase = await createServerSupabaseClient();
+  const { data: relatedProps } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("status", "active")
+    .eq("city", property.city)
+    .neq("id", id)
+    .order("created_at", { ascending: false })
+    .limit(4);
+
+  const related = (relatedProps ?? []) as Property[];
+  const relatedIds = related.map((p) => p.id);
+
+  const { data: relatedImageRows } = relatedIds.length
+    ? await supabase
+        .from("property_images")
+        .select("*")
+        .in("property_id", relatedIds)
+    : { data: [] as PropertyImage[] };
+
+  const relatedAgentIds = [...new Set(related.map((p) => p.agent_id).filter(Boolean))] as string[];
+  const { data: relatedAgentRows } = relatedAgentIds.length
+    ? await supabase
+        .from("agents")
+        .select("*")
+        .in("id", relatedAgentIds)
+    : { data: [] as Agent[] };
+
+  const relatedImageMap = buildImageMap((relatedImageRows ?? []) as PropertyImage[]);
+  const relatedAgentMap = buildAgentMap((relatedAgentRows ?? []) as Agent[]);
+
+  const relatedListings = related.map((p, i) =>
+    propertyToListing(p, relatedImageMap[p.id] ?? [], relatedAgentMap[p.agent_id ?? ""] ?? null, i)
+  );
+
   return (
     <div className="h-full flex flex-col">
       <PropertyDetailPage listing={listing} relatedListings={relatedListings} />

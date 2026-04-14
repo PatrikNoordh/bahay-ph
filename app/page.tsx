@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing, buildImageMap, buildAgentMap } from "@/lib/listingHelpers";
 import { PropertyCard } from "@/components/PropertyCard";
 import { AnimateIn } from "@/components/ui/AnimateIn";
 import { FilterTabs } from "@/components/FilterTabs";
 import { Topbar } from "@/components/Topbar";
-
-// TODO: Replace MOCK_LISTINGS with Supabase server-side queries (Phase 2 — AC9–AC14)
+import type { Property, PropertyImage, Agent } from "@/lib/types";
 
 const AREA_CHIPS = [
   { emoji: "🏙️", name: "Cebu City", count: 124 },
@@ -17,10 +17,61 @@ const AREA_CHIPS = [
   { emoji: "🏘️", name: "Talisay", count: 6 },
 ];
 
-// TODO: connect to Supabase — filter is_featured = true (Phase 2 — AC12)
-const FEATURED = MOCK_LISTINGS.slice(0, 3);
+export default async function Home() {
+  const supabase = await createServerSupabaseClient();
 
-export default function Home() {
+  // Fetch featured listings
+  const { data: featuredProps } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("status", "active")
+    .eq("is_featured", true)
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  // Fetch newest listings for the grid (capped at 12 for home page)
+  const { data: newProps } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  const allProps = [
+    ...(featuredProps ?? []),
+    ...(newProps ?? []),
+  ] as Property[];
+
+  // De-duplicate so we don't double-fetch images for featured that also appear in new
+  const uniqueIds = [...new Set(allProps.map((p) => p.id))];
+
+  // Batch-fetch images and agents for all properties in two queries
+  const { data: imageRows } = uniqueIds.length
+    ? await supabase
+        .from("property_images")
+        .select("*")
+        .in("property_id", uniqueIds)
+    : { data: [] as PropertyImage[] };
+
+  const agentIds = [...new Set(allProps.map((p) => p.agent_id).filter(Boolean))] as string[];
+  const { data: agentRows } = agentIds.length
+    ? await supabase
+        .from("agents")
+        .select("*")
+        .in("id", agentIds)
+    : { data: [] as Agent[] };
+
+  const imageMap = buildImageMap((imageRows ?? []) as PropertyImage[]);
+  const agentMap = buildAgentMap((agentRows ?? []) as Agent[]);
+
+  const featuredListings = (featuredProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+
+  const newListings = (newProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+
   return (
     // AC8 — bottom padding to clear BottomNav
     <div className="pb-16">
@@ -61,7 +112,7 @@ export default function Home() {
 
       {/* ── AC2: Stats Strip ───────────────────────────────────── */}
       <AnimateIn delay={50} className="mx-3 mt-3">
-        {/* TODO: connect to Supabase — real counts (Phase 2 — AC10) */}
+        {/* TODO: connect to Supabase — real counts via COUNT queries */}
         <div className="bg-white rounded-[14px] shadow-[var(--shadow-card)] px-4 py-3 flex justify-around">
           {[
             { value: "248", label: "Active Listings" },
@@ -85,7 +136,7 @@ export default function Home() {
             See all
           </Link>
         </div>
-        {/* TODO: connect to Supabase — real listing counts per city (Phase 2 — AC11) */}
+        {/* TODO: connect to Supabase — real listing counts per city */}
         <div className="flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
           {AREA_CHIPS.map(({ emoji, name, count }) => (
             <Link
@@ -107,21 +158,25 @@ export default function Home() {
       <AnimateIn delay={150} className="mt-5">
         <div className="flex items-center justify-between px-4 mb-2">
           <h2 className="font-display font-semibold text-base text-narra">Featured</h2>
-          {/* AC7 — See all → /search */}
           <Link href="/search" className="text-xs text-primary font-medium">
             See all
           </Link>
         </div>
-        {FEATURED.length > 0 ? (
-          // AC4 — horizontal scroll, snap-x mandatory; cards have snap-start
+        {featuredListings.length > 0 ? (
           <div className="flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory no-scrollbar">
-            {FEATURED.map((listing) => (
+            {featuredListings.map((listing) => (
               <PropertyCard key={listing.id} listing={listing} variant="featured" />
             ))}
           </div>
         ) : (
-          // Edge case: zero featured listings — section hidden
-          null
+          // Fallback: if no featured listings, show newest instead
+          newListings.length > 0 ? (
+            <div className="flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory no-scrollbar">
+              {newListings.slice(0, 3).map((listing) => (
+                <PropertyCard key={listing.id} listing={listing} variant="featured" />
+              ))}
+            </div>
+          ) : null
         )}
       </AnimateIn>
 
@@ -129,18 +184,19 @@ export default function Home() {
       <AnimateIn delay={200} className="mt-5">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="font-display font-semibold text-base text-narra">New Listings</h2>
-          {/* AC7 — See all → /search */}
           <Link href="/search" className="text-xs text-primary font-medium">
             See all
           </Link>
         </div>
-        {/* AC5 — FilterTabs is a Client Component; tab state synced to URL params */}
-        {/* TODO: connect to Supabase — show 6 most recent (Phase 2 — AC14) */}
-        {/* AC3 — limit to 12 on home page */}
-        {/* Suspense required because FilterTabs uses useSearchParams() */}
-        <Suspense fallback={<div className="h-[200px] bg-sand animate-pulse rounded-[14px] mx-4" />}>
-          <FilterTabs listings={MOCK_LISTINGS} limit={12} />
-        </Suspense>
+        {newListings.length > 0 ? (
+          <Suspense fallback={<div className="h-[200px] bg-sand animate-pulse rounded-[14px] mx-4" />}>
+            <FilterTabs listings={newListings} limit={12} />
+          </Suspense>
+        ) : (
+          <div className="px-4 py-8 text-center text-sm text-muted">
+            No listings yet — check back soon
+          </div>
+        )}
       </AnimateIn>
     </div>
   );

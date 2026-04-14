@@ -1,11 +1,9 @@
 import { Suspense } from "react";
-import { MOCK_LISTINGS } from "@/lib/mockListings";
+import { createServerSupabaseClient } from "@/lib/supabase";
+import { propertyToListing, buildImageMap, buildAgentMap } from "@/lib/listingHelpers";
 import { Topbar } from "@/components/Topbar";
 import { SearchScreen } from "@/components/SearchScreen";
-import type { Listing, PropertyType } from "@/lib/types";
-
-// TODO: connect to Supabase — replace mock filtering with createServerSupabaseClient query
-// e.g. supabase.from("properties").select("*, property_images(*)").eq("type", type)...
+import type { Property, PropertyImage, Agent, PropertyType } from "@/lib/types";
 
 // AC1 — 20 results per page
 const PAGE_SIZE = 20;
@@ -32,100 +30,110 @@ const VALID_TYPES: PropertyType[] = [
   "commercial",
 ];
 
-// Parse "₱18,500,000" → 18500000; "₱25,000/mo" → 25000
-// TODO: remove when Supabase returns numeric price column
-function parseMockPrice(formatted: string): number {
-  return parseInt(formatted.replace(/[₱,]/g, "").split("/")[0], 10) || 0;
-}
-
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const p = await searchParams;
+  const supabase = await createServerSupabaseClient();
 
-  // Validate params — invalid values are silently ignored (AC edge case)
+  // Validate params — invalid values are silently ignored
   const typeParam = VALID_TYPES.includes(p.type as PropertyType)
     ? (p.type as PropertyType)
     : undefined;
 
-  // TODO: connect to Supabase — replace all filtering below with a single server query
-  let listings: Listing[] = MOCK_LISTINGS;
+  const page = Math.max(1, parseInt(p.page ?? "1", 10));
+  const priceMin = parseInt(p.priceMin ?? "", 10);
+  const priceMax = parseInt(p.priceMax ?? "", 10);
+  const minBeds = parseInt(p.beds ?? "", 10);
 
-  // Text search (q)
+  // Build Supabase query with all filters applied server-side
+  let query = supabase
+    .from("properties")
+    .select("*", { count: "exact" })
+    .eq("status", "active");
+
+  // Text search across title, description, city, address
   if (p.q?.trim()) {
-    const q = p.q.toLowerCase();
-    listings = listings.filter(
-      (l) =>
-        l.name.toLowerCase().includes(q) ||
-        l.location.toLowerCase().includes(q) ||
-        l.description.toLowerCase().includes(q) ||
-        l.tags.some((t) => t.toLowerCase().includes(q))
+    const q = p.q.trim();
+    query = query.or(
+      `title.ilike.%${q}%,description.ilike.%${q}%,city.ilike.%${q}%,address.ilike.%${q}%`
     );
   }
 
   // City filter
   if (p.city?.trim()) {
-    const city = p.city.toLowerCase();
-    listings = listings.filter((l) =>
-      l.location.toLowerCase().includes(city)
-    );
+    query = query.ilike("city", `%${p.city.trim()}%`);
   }
 
   // Property type filter
   if (typeParam) {
-    listings = listings.filter((l) => l.type === typeParam);
+    query = query.eq("property_type", typeParam);
   }
 
   // Listing type filter (sale / rent)
   if (p.listingType === "sale") {
-    listings = listings.filter(
-      (l) => l.badge === "For Sale" || l.badge === "New"
-    );
+    query = query.eq("price_type", "sale");
   } else if (p.listingType === "rent") {
-    listings = listings.filter((l) => l.badge === "For Rent");
+    query = query.eq("price_type", "rent");
   }
 
-  // Beds filter (minimum)
-  const minBeds = parseInt(p.beds ?? "", 10);
+  // Minimum beds filter
   if (!isNaN(minBeds) && minBeds > 0) {
-    listings = listings.filter(
-      (l) => l.beds !== null && l.beds >= minBeds
-    );
+    query = query.gte("bedrooms", minBeds);
   }
 
-  // Price range filter — uses parsed mock price string
-  // TODO: connect to Supabase — use .gte("price", priceMin).lte("price", priceMax)
-  const priceMin = parseInt(p.priceMin ?? "", 10);
-  const priceMax = parseInt(p.priceMax ?? "", 10);
+  // Price range filter — uses numeric price column
   if (!isNaN(priceMin)) {
-    listings = listings.filter((l) => parseMockPrice(l.price) >= priceMin);
+    query = query.gte("price", priceMin);
   }
   if (!isNaN(priceMax)) {
-    listings = listings.filter((l) => parseMockPrice(l.price) <= priceMax);
+    query = query.lte("price", priceMax);
   }
 
-  // Sort — TODO: connect to Supabase — use .order("created_at") or .order("price")
+  // Sort
   if (p.sort === "price_asc") {
-    listings = [...listings].sort(
-      (a, b) => parseMockPrice(a.price) - parseMockPrice(b.price)
-    );
+    query = query.order("price", { ascending: true });
   } else if (p.sort === "price_desc") {
-    listings = [...listings].sort(
-      (a, b) => parseMockPrice(b.price) - parseMockPrice(a.price)
-    );
+    query = query.order("price", { ascending: false });
+  } else {
+    // Default: newest first
+    query = query.order("created_at", { ascending: false });
   }
-  // Default "newest" — MOCK_LISTINGS are already in newest-first order
 
-  // AC1/AC5 — Paginate: ?page=1 shows first PAGE_SIZE, ?page=2 shows 2×PAGE_SIZE, etc.
-  // TODO: connect to Supabase — use .range(0, page * PAGE_SIZE - 1) with count option
-  const totalCount = listings.length;
-  const page = Math.max(1, parseInt(p.page ?? "1", 10));
-  const pagedListings = listings.slice(0, page * PAGE_SIZE);
+  // Pagination: return up to page * PAGE_SIZE results (cumulative load-more)
+  query = query.range(0, page * PAGE_SIZE - 1);
+
+  const { data: props, count, error } = await query;
+
+  const properties = (error ? [] : (props ?? [])) as Property[];
+  const totalCount = count ?? 0;
+
+  // Batch-fetch images and agents for the result set
+  const propertyIds = properties.map((p) => p.id);
+  const { data: imageRows } = propertyIds.length
+    ? await supabase
+        .from("property_images")
+        .select("*")
+        .in("property_id", propertyIds)
+    : { data: [] as PropertyImage[] };
+
+  const agentIds = [...new Set(properties.map((p) => p.agent_id).filter(Boolean))] as string[];
+  const { data: agentRows } = agentIds.length
+    ? await supabase
+        .from("agents")
+        .select("*")
+        .in("id", agentIds)
+    : { data: [] as Agent[] };
+
+  const imageMap = buildImageMap((imageRows ?? []) as PropertyImage[]);
+  const agentMap = buildAgentMap((agentRows ?? []) as Agent[]);
+
+  const listings = properties.map((prop, i) =>
+    propertyToListing(prop, imageMap[prop.id] ?? [], agentMap[prop.agent_id ?? ""] ?? null, i)
+  );
 
   return (
     <div className="min-h-[100dvh] pb-16">
-      {/* AC5 — Topbar with settings icon on right */}
       <Topbar actions={[{ icon: "⚙️", label: "Settings" }]} />
 
-      {/* Suspense required for useSearchParams() inside SearchScreen */}
       <Suspense
         fallback={
           <div className="px-4 pt-8 text-center text-sm text-muted">
@@ -133,8 +141,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </div>
         }
       >
-        {/* All search interactivity lives in the Client Component */}
-        <SearchScreen listings={pagedListings} totalCount={totalCount} currentPage={page} />
+        <SearchScreen listings={listings} totalCount={totalCount} currentPage={page} />
       </Suspense>
     </div>
   );
