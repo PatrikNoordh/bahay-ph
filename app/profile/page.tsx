@@ -31,57 +31,42 @@ function getDisplayName(
   return "Member";
 }
 
-const GUEST_MENU_GROUPS = [
-  {
-    label: "Account",
-    items: [
-      { icon: "🔑", label: "Sign in", iconBg: "bg-primary-pale", href: "/auth" },
-      { icon: "📋", label: "List your property", iconBg: "bg-green/10", href: null },
-      { icon: "🏢", label: "I'm a broker / agent", iconBg: "bg-ocean/10", href: null },
-    ],
-  },
-  {
-    label: "Discover",
-    items: [
-      { icon: "📊", label: "Market trends", iconBg: "bg-primary-pale", href: null },
-      { icon: "🧮", label: "Mortgage calculator", iconBg: "bg-green/10", href: null },
-      { icon: "📖", label: "Buying guide", iconBg: "bg-ocean/10", href: null },
-    ],
-  },
-  {
-    label: "More",
-    items: [
-      { icon: "⚙️", label: "Settings", iconBg: "bg-sand-dark", href: null },
-      { icon: "❓", label: "Help & support", iconBg: "bg-sand-dark", href: null },
-    ],
-  },
-] as const;
+type MenuItem = { icon: string; label: string; iconBg: string; href: string };
+type MenuGroup = { label: string; items: MenuItem[] };
 
-const AUTH_MENU_GROUPS = [
-  {
-    label: "My Account",
-    items: [
-      { icon: "❤️", label: "Saved properties", iconBg: "bg-primary-pale", href: "/saved" },
-      { icon: "📋", label: "List your property", iconBg: "bg-green/10", href: null },
-      { icon: "🏢", label: "Agent dashboard", iconBg: "bg-ocean/10", href: "/agent/dashboard" },
-    ],
-  },
-  {
-    label: "Discover",
-    items: [
-      { icon: "📊", label: "Market trends", iconBg: "bg-primary-pale", href: null },
-      { icon: "🧮", label: "Mortgage calculator", iconBg: "bg-green/10", href: null },
-      { icon: "📖", label: "Buying guide", iconBg: "bg-ocean/10", href: null },
-    ],
-  },
-  {
-    label: "More",
-    items: [
-      { icon: "⚙️", label: "Settings", iconBg: "bg-sand-dark", href: null },
-      { icon: "❓", label: "Help & support", iconBg: "bg-sand-dark", href: null },
-    ],
-  },
-] as const;
+/** AC1–AC4 — Build menu groups with only live destinations; no null hrefs */
+function buildMenuGroups(isLoggedIn: boolean, isBroker: boolean): MenuGroup[] {
+  if (!isLoggedIn) {
+    return [
+      {
+        label: "Account",
+        items: [
+          { icon: "🔑", label: "Sign in", iconBg: "bg-primary-pale", href: "/auth" },
+          // AC2 — "I'm a broker / agent" links to /agent/dashboard
+          { icon: "🏢", label: "I'm a broker / agent", iconBg: "bg-ocean/10", href: "/agent/dashboard" },
+        ],
+      },
+    ];
+  }
+
+  const accountItems: MenuItem[] = [
+    { icon: "❤️", label: "Saved properties", iconBg: "bg-primary-pale", href: "/saved" },
+  ];
+
+  // Edge case: show "Agent dashboard" for brokers, "I'm a broker / agent" for non-brokers
+  if (isBroker) {
+    accountItems.push({ icon: "🏢", label: "Agent dashboard", iconBg: "bg-ocean/10", href: "/agent/dashboard" });
+  } else {
+    accountItems.push({ icon: "🏢", label: "I'm a broker / agent", iconBg: "bg-ocean/10", href: "/agent/dashboard" });
+  }
+
+  return [
+    {
+      label: "My Account",
+      items: accountItems,
+    },
+  ];
+}
 
 export default async function ProfilePage() {
   // AC4, AC7 — read auth state in Server Component
@@ -91,7 +76,6 @@ export default async function ProfilePage() {
   } = await supabase.auth.getUser();
 
   const isLoggedIn = !!user;
-  const menuGroups = isLoggedIn ? AUTH_MENU_GROUPS : GUEST_MENU_GROUPS;
 
   // AC5 — fetch agent record for verified brokers (best-effort, never crashes on miss)
   let agentName: string | null = null;
@@ -122,6 +106,7 @@ export default async function ProfilePage() {
     : null;
   const initials = displayName ? getInitials(displayName) : null;
   const isBroker = !!agentName;
+  const menuGroups = buildMenuGroups(isLoggedIn, isBroker);
 
   return (
     <div className="pb-16">
@@ -192,48 +177,28 @@ export default async function ProfilePage() {
             </p>
 
             <div>
-              {items.map(({ icon, label: itemLabel, iconBg, href }) => {
-                const inner = (
-                  <>
-                    <div
-                      className={`w-[38px] h-[38px] rounded-[10px] ${iconBg} flex items-center justify-center flex-shrink-0`}
-                    >
-                      <span className="text-lg leading-none" aria-hidden="true">
-                        {icon}
-                      </span>
-                    </div>
-                    <span className="flex-1 text-[14px] font-medium text-narra text-left">
-                      {itemLabel}
-                    </span>
-                    <span className="text-muted-light text-lg leading-none" aria-hidden="true">
-                      ›
-                    </span>
-                  </>
-                );
-
-                // Items with an href use Link; others are placeholder buttons
-                if (href) {
-                  return (
-                    <Link
-                      key={itemLabel}
-                      href={href}
-                      className="w-full bg-white rounded-xl p-4 mb-1.5 flex items-center gap-3 active:scale-[0.98] active:bg-sand-dark transition-all duration-100 last:mb-0"
-                    >
-                      {inner}
-                    </Link>
-                  );
-                }
-
-                return (
-                  <button
-                    key={itemLabel}
-                    type="button"
-                    className="w-full bg-white rounded-xl p-4 mb-1.5 flex items-center gap-3 active:scale-[0.98] active:bg-sand-dark transition-all duration-100 last:mb-0"
+              {items.map(({ icon, label: itemLabel, iconBg, href }) => (
+                // AC1, AC4 — all items have a live href; no placeholder buttons
+                <Link
+                  key={itemLabel}
+                  href={href}
+                  className="w-full bg-white rounded-xl p-4 mb-1.5 flex items-center gap-3 active:scale-[0.98] active:bg-sand-dark transition-all duration-100 last:mb-0"
+                >
+                  <div
+                    className={`w-[38px] h-[38px] rounded-[10px] ${iconBg} flex items-center justify-center flex-shrink-0`}
                   >
-                    {inner}
-                  </button>
-                );
-              })}
+                    <span className="text-lg leading-none" aria-hidden="true">
+                      {icon}
+                    </span>
+                  </div>
+                  <span className="flex-1 text-[14px] font-medium text-narra text-left">
+                    {itemLabel}
+                  </span>
+                  <span className="text-muted-light text-lg leading-none" aria-hidden="true">
+                    ›
+                  </span>
+                </Link>
+              ))}
 
               {/* AC3 — Show sign out at end of first group when logged in */}
               {isLoggedIn && groupIdx === menuGroups.length - 1 && (
