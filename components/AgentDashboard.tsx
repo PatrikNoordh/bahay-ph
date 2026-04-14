@@ -23,6 +23,8 @@ const DynamicLocationPicker = dynamic(
 
 interface AgentDashboardProps {
   agentId: string;
+  /** AC5/AC6 — false until admin sets is_verified = true in Supabase */
+  isVerified: boolean;
   initialListings: Property[];
   /** Primary image URL keyed by property_id — for thumbnail display */
   initialPrimaryImages: Record<string, string>;
@@ -207,7 +209,7 @@ function isFormValid(form: FormValues, errors: FormErrors): boolean {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function AgentDashboard({ agentId, initialListings, initialPrimaryImages }: AgentDashboardProps) {
+export function AgentDashboard({ agentId, isVerified, initialListings, initialPrimaryImages }: AgentDashboardProps) {
   const [listings, setListings] = useState<Property[]>(initialListings);
   const [primaryImages, setPrimaryImages] = useState<Record<string, string>>(initialPrimaryImages);
   const [showForm, setShowForm] = useState(false);
@@ -549,6 +551,19 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
 
   return (
     <div className="flex-1 overflow-y-auto pb-4">
+      {/* AC5 — Pending verification banner */}
+      {!isVerified && (
+        <div className="mx-4 mt-4 bg-ocean/10 border border-ocean/20 rounded-[14px] px-4 py-3 flex gap-3 items-start">
+          <span className="text-xl leading-none mt-0.5" aria-hidden="true">⏳</span>
+          <div>
+            <p className="text-sm font-semibold text-ocean">Verification pending</p>
+            <p className="text-xs text-muted mt-0.5">
+              Our team is reviewing your PRC licence. You can create listings once verified — usually within 1 business day.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-4">
         <div>
@@ -559,11 +574,12 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
             {listings.length} {listings.length === 1 ? "listing" : "listings"}
           </p>
         </div>
-        {/* AC4 — Add listing button */}
+        {/* AC6 — Add listing blocked until verified */}
         <button
           type="button"
           onClick={openAdd}
-          className="bg-primary text-white text-sm font-medium rounded-[12px] px-4 py-2.5 active:scale-[0.97] transition-transform duration-100"
+          disabled={!isVerified}
+          className="bg-primary text-white text-sm font-medium rounded-[12px] px-4 py-2.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           + Add listing
         </button>
@@ -574,14 +590,20 @@ export function AgentDashboard({ agentId, initialListings, initialPrimaryImages 
         <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
           <p className="text-4xl mb-3" aria-hidden="true">🏠</p>
           <p className="font-semibold text-narra mb-1">No listings yet</p>
-          <p className="text-sm text-muted mb-4">Add your first listing to get started.</p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="bg-primary text-white text-sm font-medium rounded-[12px] px-5 py-2.5 active:scale-[0.97] transition-transform duration-100"
-          >
-            Add listing
-          </button>
+          <p className="text-sm text-muted mb-4">
+            {isVerified
+              ? "Add your first listing to get started."
+              : "You can add listings once your account is verified."}
+          </p>
+          {isVerified && (
+            <button
+              type="button"
+              onClick={openAdd}
+              className="bg-primary text-white text-sm font-medium rounded-[12px] px-5 py-2.5 active:scale-[0.97] transition-transform duration-100"
+            >
+              Add listing
+            </button>
+          )}
         </div>
       ) : (
         // AC3 — Listing rows

@@ -14,31 +14,14 @@ export default async function AgentDashboardPage() {
 
   if (!user) redirect("/auth?redirectTo=/agent/dashboard");
 
-  // AC — Edge case: logged-in user with no agent record (buyers, guests who sign up)
+  // AC1 — No agent row → send user through broker onboarding
   const { data: agent } = await supabase
     .from("agents")
-    .select("id, full_name, company_name")
+    .select("id, full_name, company_name, is_verified")
     .eq("user_id", user.id)
     .single();
 
-  if (!agent) {
-    return (
-      <div className="pb-16">
-        <Topbar />
-        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-          <p className="text-4xl mb-3" aria-hidden="true">🏢</p>
-          <p className="font-display font-semibold text-lg text-narra mb-1">
-            No agent profile yet
-          </p>
-          <p className="text-sm text-muted max-w-xs">
-            Your account doesn&apos;t have an agent profile. Contact{" "}
-            <span className="text-primary font-medium">Bahay.ph</span> to get
-            verified as a licensed broker.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!agent) redirect("/agent/onboarding");
 
   // AC2 — Fetch all listings belonging to this agent (RLS enforces ownership)
   const { data: listings } = await supabase
@@ -69,6 +52,7 @@ export default async function AgentDashboardPage() {
       <Topbar />
       <AgentDashboard
         agentId={agent.id}
+        isVerified={agent.is_verified}
         initialListings={(listings ?? []) as Property[]}
         initialPrimaryImages={initialPrimaryImages}
       />

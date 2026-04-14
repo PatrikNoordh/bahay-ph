@@ -16,12 +16,17 @@ export async function POST(request: Request) {
   // Resolve agent record — buyers have no agent row
   const { data: agent } = await supabase
     .from("agents")
-    .select("id")
+    .select("id, is_verified")
     .eq("user_id", user.id)
     .single();
 
   if (!agent) {
     return NextResponse.json({ error: "No agent profile found" }, { status: 403 });
+  }
+
+  // AC6 — Only verified brokers can create listings
+  if (!agent.is_verified) {
+    return NextResponse.json({ error: "Your account is pending verification. You can create listings once approved." }, { status: 403 });
   }
 
   const body = await request.json() as {

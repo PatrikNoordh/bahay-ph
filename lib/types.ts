@@ -18,6 +18,7 @@ export interface Agent {
   email: string | null;
   company_name: string | null;
   years_experience: number | null;
+  prc_license_number: string | null;
   avatar_url: string | null;
   is_verified: boolean;
   subscription_tier: SubscriptionTier;
