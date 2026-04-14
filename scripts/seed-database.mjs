@@ -12,7 +12,8 @@
  * Uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS (no auth.users required).
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
@@ -30,7 +31,13 @@ if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-if (!fs.existsSync(GENERATED_DIR) || fs.readdirSync(GENERATED_DIR).filter((f) => f.endsWith(".jpg")).length === 0) {
+console.log(`🔍  Looking for images in: ${GENERATED_DIR}`);
+const jpgFiles = fs.existsSync(GENERATED_DIR)
+  ? fs.readdirSync(GENERATED_DIR).filter((f) => f.endsWith(".jpg"))
+  : [];
+console.log(`    Found ${jpgFiles.length} JPG(s): ${jpgFiles.slice(0, 3).join(", ")}${jpgFiles.length > 3 ? "…" : ""}`);
+
+if (jpgFiles.length === 0) {
   console.error("❌  No generated images found in scripts/generated/");
   console.error("    Run node scripts/generate-images.mjs first");
   process.exit(1);
