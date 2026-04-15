@@ -1,7 +1,13 @@
 // ============================================================
 // Bahay.ph — Database Types
 // Matches the Supabase schema in supabase/bahay_schema.sql
+//
+// Generated Supabase types live in lib/database.types.ts.
+// Run `npm run gen:types` after any schema change to regenerate.
+// The types below extend / narrow the generated types with stricter unions.
 // ============================================================
+
+export type { Database } from "@/lib/database.types";
 
 export type SubscriptionTier = "starter" | "pro" | "agency";
 export type PriceType = "sale" | "rent";
