@@ -4,11 +4,11 @@ import { AuthForm } from "@/components/AuthForm";
 // AC3 — Redirect if already signed in handled in middleware.ts
 
 interface AuthPageProps {
-  searchParams: Promise<{ redirectTo?: string }>;
+  searchParams: Promise<{ redirectTo?: string; error?: string }>;
 }
 
 export default async function AuthPage({ searchParams }: AuthPageProps) {
-  const { redirectTo } = await searchParams;
+  const { redirectTo, error } = await searchParams;
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-sand px-4 pt-12 pb-8">
@@ -24,7 +24,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
       </div>
 
       {/* AC1, AC2 — Sign in / sign up form */}
-      <AuthForm redirectTo={redirectTo ?? "/profile"} />
+      <AuthForm redirectTo={redirectTo ?? "/profile"} urlError={error} />
 
       {/* Back link */}
       <p className="text-center text-xs text-muted mt-6">
