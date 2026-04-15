@@ -36,6 +36,14 @@ type MenuGroup = { label: string; items: MenuItem[] };
 
 /** AC1–AC4 — Build menu groups with only live destinations; no null hrefs */
 function buildMenuGroups(isLoggedIn: boolean, isBroker: boolean): MenuGroup[] {
+  // BH-53 — Tools group available to all users
+  const toolsGroup: MenuGroup = {
+    label: "Tools",
+    items: [
+      { icon: "🧮", label: "Mortgage Calculator", iconBg: "bg-green/10", href: "/calculator" },
+    ],
+  };
+
   if (!isLoggedIn) {
     return [
       {
@@ -46,6 +54,7 @@ function buildMenuGroups(isLoggedIn: boolean, isBroker: boolean): MenuGroup[] {
           { icon: "🏢", label: "I'm a broker / agent", iconBg: "bg-ocean/10", href: "/agent/dashboard" },
         ],
       },
+      toolsGroup,
     ];
   }
 
@@ -65,6 +74,7 @@ function buildMenuGroups(isLoggedIn: boolean, isBroker: boolean): MenuGroup[] {
       label: "My Account",
       items: accountItems,
     },
+    toolsGroup,
   ];
 }
 
