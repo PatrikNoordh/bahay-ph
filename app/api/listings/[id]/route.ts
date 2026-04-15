@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import type { PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import type { TablesUpdate } from "@/lib/database.types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -74,7 +75,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   // Build update payload — only include fields present in the request body
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<"properties"> = {};
   if (body.title !== undefined) update.title = body.title.trim();
   if (body.description !== undefined) update.description = body.description?.trim() ?? null;
   if (body.price !== undefined) update.price = Number(String(body.price).replace(/[₱,\s]/g, ""));
