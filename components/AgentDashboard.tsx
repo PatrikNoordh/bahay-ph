@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useToast } from "@/components/ui/Toast";
 import type { Property, PropertyImage, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import type { CreateListingRequest, UpdateListingRequest } from "@/lib/api.types";
 
 // BH-30 — Leaflet picker is client-only (accesses window)
 const DynamicLocationPicker = dynamic(
@@ -417,7 +418,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
       const res = await fetch(`/api/listings/${editingListing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload as UpdateListingRequest),
       });
 
       if (!res.ok) {
@@ -472,7 +473,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
       const res = await fetch("/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload as CreateListingRequest),
       });
 
       if (!res.ok) {
@@ -535,7 +536,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
       const res = await fetch(`/api/listings/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies UpdateListingRequest),
       });
 
       if (!res.ok) {

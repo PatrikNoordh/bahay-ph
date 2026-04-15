@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import type { PropertyStatus, PriceType, PropertyType } from "@/lib/types";
 import type { TablesUpdate } from "@/lib/database.types";
+import type { UpdateListingRequest } from "@/lib/api.types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -20,21 +20,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const body = await request.json() as {
-    title?: string;
-    description?: string | null;
-    price?: number | string;
-    price_type?: PriceType;
-    property_type?: PropertyType;
-    bedrooms?: number | string | null;
-    bathrooms?: number | string | null;
-    floor_area?: number | string | null;
-    lot_size?: number | string | null;
-    address?: string | null;
-    city?: string;
-    barangay?: string | null;
-    status?: PropertyStatus;
-  };
+  const body = await request.json() as UpdateListingRequest;
 
   // AC7 — Server-side validation mirroring client rules (only validate fields present in body)
   if (body.title !== undefined) {

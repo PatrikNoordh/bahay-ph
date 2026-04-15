@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import type { Property } from "@/lib/types";
+import type { DeleteSavedRequest } from "@/lib/api.types";
 import { useToast } from "@/components/ui/Toast";
 
 export interface SavedItem {
@@ -145,7 +146,7 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
       const res = await fetch("/api/saved", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: savedId }),
+        body: JSON.stringify({ id: savedId } satisfies DeleteSavedRequest),
       });
 
       if (!res.ok) {

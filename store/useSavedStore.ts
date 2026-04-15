@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { SavePropertyRequest, DeleteSavedRequest } from "@/lib/api.types";
 
 // property_id → saved_properties.id (or "__optimistic__" during in-flight saves)
 type SavedMap = Record<string, string>;
@@ -99,12 +100,12 @@ export const useSavedStore = create<SavedStore>((set, get) => ({
         ? fetch("/api/saved", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: savedId }),
+            body: JSON.stringify({ id: savedId } satisfies DeleteSavedRequest),
           })
         : fetch("/api/saved", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ property_id: propertyId }),
+            body: JSON.stringify({ property_id: propertyId } satisfies SavePropertyRequest),
           }));
 
       if (isStale()) return "ok";
