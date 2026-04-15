@@ -5,6 +5,80 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// PATCH /api/images/[id] — update sort_order (and optionally is_primary) for a single image
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const body = (await request.json()) as {
+    sort_order?: number;
+    is_primary?: boolean;
+  };
+
+  if (body.sort_order === undefined && body.is_primary === undefined) {
+    return NextResponse.json(
+      { error: "sort_order or is_primary is required" },
+      { status: 400 }
+    );
+  }
+
+  // Fetch image to verify ownership
+  const { data: image } = await supabase
+    .from("property_images")
+    .select("id, property_id")
+    .eq("id", id)
+    .single();
+
+  if (!image) {
+    return NextResponse.json({ error: "Image not found" }, { status: 404 });
+  }
+
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: property } = await supabase
+    .from("properties")
+    .select("agent_id")
+    .eq("id", image.property_id)
+    .single();
+
+  if (!property || property.agent_id !== agent.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const updates: { sort_order?: number; is_primary?: boolean } = {};
+  if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
+  if (body.is_primary !== undefined) updates.is_primary = body.is_primary;
+
+  const { data, error } = await supabase
+    .from("property_images")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
 // DELETE /api/images/[id] — delete image record from DB and file from Storage
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const supabase = await createServerSupabaseClient();

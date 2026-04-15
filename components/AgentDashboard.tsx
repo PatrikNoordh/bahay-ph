@@ -233,6 +233,8 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
   /** New local files chosen but not yet uploaded */
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
+  /** AC8 — upload progress shown after form closes */
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   // ── Form open/close ───────────────────────────────────────────────────────
 
@@ -307,8 +309,53 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
     setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
+  /** AC5 — move an existing image up or down within the local array */
+  function handleReorderExisting(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    setExistingImages((prev) => {
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  /** AC5 — move a pending file up or down within the local array */
+  function handleReorderPending(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    setPendingFiles((prev) => {
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  /**
+   * AC5 — PATCH sort_order for any existing images whose position in the local
+   * array no longer matches the sort_order stored in the DB.
+   */
+  const patchReorderedImages = useCallback(async () => {
+    const patches = existingImages
+      .map((img, i) => ({ img, newOrder: i }))
+      .filter(({ img, newOrder }) => img.sort_order !== newOrder);
+
+    await Promise.all(
+      patches.map(({ img, newOrder }) =>
+        fetch(`/api/images/${img.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: newOrder }),
+        }).catch(() => {
+          console.warn("[ImageUpload] Failed to patch sort_order for", img.id);
+        })
+      )
+    );
+  }, [existingImages]);
+
   /**
    * Upload pending files to Supabase Storage and save records to DB.
+   * AC8 — updates uploadProgress as each file completes.
    * Returns the public URL of the first uploaded image (for thumbnail update).
    */
   const uploadPendingFiles = useCallback(
@@ -321,6 +368,9 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
       );
       let firstUrl: string | null = null;
 
+      // AC8 — initialise progress
+      setUploadProgress({ done: 0, total: pendingFiles.length });
+
       for (let i = 0; i < pendingFiles.length; i++) {
         const file = pendingFiles[i];
         const ext = file.name.split(".").pop() ?? "jpg";
@@ -332,6 +382,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
 
         if (uploadError) {
           console.warn("[ImageUpload] Storage upload failed:", uploadError.message);
+          setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
           continue;
         }
 
@@ -355,8 +406,13 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
         if (res.ok && isPrimary) {
           firstUrl = publicUrl;
         }
+
+        // AC8 — advance progress after each file
+        setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
       }
 
+      // AC8 — clear progress when done
+      setUploadProgress(null);
       return firstUrl;
     },
     [pendingFiles]
@@ -434,9 +490,10 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
           prev.map((l) => (l.id === updated.id ? updated : l))
         );
 
-        // Handle image changes in parallel
+        // Handle image changes in parallel — AC5 reorder, AC6 delete, AC2 upload
         const remainingCount = existingImages.length; // after UI removals
         await Promise.all([
+          patchReorderedImages(),
           deleteRemovedImages(),
           uploadPendingFiles(editingListing.id, remainingCount).then((newPrimaryUrl) => {
             if (newPrimaryUrl) {
@@ -496,7 +553,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
     }
 
     setIsSaving(false);
-  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, uploadPendingFiles, primaryImages, showToast]);
+  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, patchReorderedImages, uploadPendingFiles, primaryImages, showToast]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
@@ -552,6 +609,24 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
 
   return (
     <div className="flex-1 overflow-y-auto pb-4">
+      {/* AC8 — Upload progress banner (shown after form closes while upload runs) */}
+      {uploadProgress && (
+        <div className="mx-4 mt-4 bg-ocean/10 border border-ocean/20 rounded-[14px] px-4 py-3 flex items-center gap-3">
+          <span className="w-4 h-4 border-2 border-ocean border-t-transparent rounded-full animate-spin flex-shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ocean">
+              Uploading photos… {uploadProgress.done}/{uploadProgress.total}
+            </p>
+            <div className="mt-1.5 h-1.5 bg-ocean/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-ocean rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AC5 — Pending verification banner */}
       {!isVerified && (
         <div className="mx-4 mt-4 bg-ocean/10 border border-ocean/20 rounded-[14px] px-4 py-3 flex gap-3 items-start">
@@ -757,6 +832,8 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
                     onAddFiles={handleAddFiles}
                     onRemoveExisting={handleRemoveExisting}
                     onRemovePending={handleRemovePending}
+                    onReorderExisting={handleReorderExisting}
+                    onReorderPending={handleReorderPending}
                   />
                 )}
               </Field>
