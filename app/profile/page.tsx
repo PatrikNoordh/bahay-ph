@@ -36,11 +36,12 @@ type MenuGroup = { label: string; items: MenuItem[] };
 
 /** AC1–AC4 — Build menu groups with only live destinations; no null hrefs */
 function buildMenuGroups(isLoggedIn: boolean, isBroker: boolean): MenuGroup[] {
-  // BH-53 — Tools group available to all users
+  // BH-53, BH-54 — Tools group available to all users
   const toolsGroup: MenuGroup = {
     label: "Tools",
     items: [
       { icon: "🧮", label: "Mortgage Calculator", iconBg: "bg-green/10", href: "/calculator" },
+      { icon: "📊", label: "Market Trends", iconBg: "bg-ocean/10", href: "/trends" },
     ],
   };
 
