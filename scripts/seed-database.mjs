@@ -84,20 +84,34 @@ async function uploadImage(localPath, storagePath) {
 }
 
 // ─── Image URL map ─────────────────────────────────────────────────────────────
-// Returns { exterior, living, bedroom, kitchen } URLs for a property type.
-// Falls back gracefully if a specific file wasn't generated.
+// Returns an array of { filename, localPath } for a property's images.
+// Checks for per-listing slug-based images first ({slug}-exterior.jpg, etc.)
+// Falls back to type-based images ({type}-exterior-1.jpg, etc.) if not found.
 
-function getLocalImages(type) {
-  const angles = ["exterior-1", "exterior-2", "exterior-3", "interior-living", "interior-bedroom", "interior-kitchen"];
-  const map = {};
-  for (const angle of angles) {
-    const filename = `${type}-${angle}.jpg`;
-    const localPath = path.join(GENERATED_DIR, filename);
-    if (fs.existsSync(localPath)) {
-      map[angle] = localPath;
-    }
+function getLocalImages(type, slug) {
+  // Per-listing angles (new unique images)
+  const slugAngles = ["exterior", "living", "bedroom", "kitchen"];
+  const slugImages = slugAngles
+    .map((angle) => {
+      const filename = `${slug}-${angle}.jpg`;
+      const localPath = path.join(GENERATED_DIR, filename);
+      return fs.existsSync(localPath) ? { filename, localPath } : null;
+    })
+    .filter(Boolean);
+
+  if (slugImages.length > 0) {
+    return slugImages;
   }
-  return map;
+
+  // Fallback: type-based images (old shared images)
+  const typeAngles = ["exterior-1", "exterior-2", "exterior-3", "interior-living", "interior-bedroom", "interior-kitchen"];
+  return typeAngles
+    .map((angle) => {
+      const filename = `${type}-${angle}.jpg`;
+      const localPath = path.join(GENERATED_DIR, filename);
+      return fs.existsSync(localPath) ? { filename, localPath } : null;
+    })
+    .filter(Boolean);
 }
 
 // ─── Seed data ─────────────────────────────────────────────────────────────────
@@ -147,6 +161,7 @@ const AGENTS = [
 const PROPERTIES = [
   // ── Cebu City (8) ──────────────────────────────────────────────────────────
   {
+    _slug: "it-park-condo-2br",
     title: "Modern 2BR Condo, Cebu IT Park",
     description:
       "Sleek 2-bedroom condo on a high floor in the IT Park district. City views, gym, pool, 24/7 security. Ideal for professionals or investors. Walking distance to restaurants and tech offices.",
@@ -168,6 +183,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "lahug-studio-condo",
     title: "Studio for Rent, Lahug Cebu City",
     description:
       "Cosy furnished studio in the Lahug residential area. Includes aircon, ref, and washing machine. Walking distance to Capitol and Cebu Doctors' Hospital. Utilities excluded.",
@@ -189,6 +205,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "banilad-family-home",
     title: "3BR Family Home, Banilad",
     description:
       "Spacious 3-bedroom house in the quiet, established neighbourhood of Banilad. Covered garage, tiled garden lanai, and maid's quarters. Near Ateneo de Cebu and top private schools.",
@@ -210,6 +227,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "ayala-condo-1br",
     title: "Furnished 1BR Condo, Cebu Ayala Area",
     description:
       "Fully furnished 1-bedroom unit near Ayala Center Cebu. Move-in ready with fast WiFi, modern appliances, and access to rooftop pool and gym. Perfect for expats and young professionals.",
@@ -231,6 +249,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "talamban-corner-lot",
     title: "Corner Lot, Talamban Cebu City",
     description:
       "Prime 220 sqm corner lot in fast-developing Talamban. Flat terrain, clean title, and all utilities at the boundary. Residential or light commercial use. Near University of San Carlos.",
@@ -252,6 +271,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "beverly-hills-luxury-house",
     title: "4BR Luxury House, Beverly Hills Cebu",
     description:
       "Prestigious 4-bedroom residence in Beverly Hills Subdivision. Private swimming pool, landscaped garden, 3-car garage, and entertainment deck. One of Cebu City's most exclusive addresses.",
@@ -273,6 +293,7 @@ const PROPERTIES = [
     _agent: "jasmine",
   },
   {
+    _slug: "it-park-studio-condo",
     title: "Studio Condo for Sale, IT Park Cebu",
     description:
       "Affordable studio unit in a well-maintained building inside Cebu IT Park. Balcony with city views, shared pool and gym. Great entry-level investment — high rental demand from BPO workers.",
@@ -294,6 +315,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "colon-commercial-space",
     title: "Commercial Space for Rent, Colon Street",
     description:
       "Ground-floor commercial unit on Cebu's historic Colon Street. 80 sqm, column-free layout, wide glass frontage, high pedestrian and vehicle traffic. Suitable for retail, food, or office.",
@@ -317,6 +339,7 @@ const PROPERTIES = [
 
   // ── Lapu-Lapu City / Mactan (4) ────────────────────────────────────────────
   {
+    _slug: "punta-engano-beachfront-villa",
     title: "Beachfront Villa, Punta Engano Mactan",
     description:
       "Stunning beachfront villa with direct ocean access and private pool. Wake up to panoramic views of the Cebu Strait. Open-plan living, high ceilings, fully furnished — perfect for families or as a premium rental investment.",
@@ -338,6 +361,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "mactan-newtown-condo-3br",
     title: "3BR Condo, Mactan Newtown",
     description:
       "Bright 3-bedroom unit in the premium Mactan Newtown township. Ocean-view units available. Resort-style amenities: beach club, pools, and dining. Minutes from Mactan-Cebu International Airport.",
@@ -359,6 +383,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "mactan-airport-lot",
     title: "Residential Lot Near Mactan Airport",
     description:
       "Strategically located 300 sqm residential lot, 5 minutes from Mactan-Cebu International Airport. Flat terrain, concrete perimeter fence, clean title. High value for OFW families.",
@@ -380,6 +405,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "mactan-vacation-condo",
     title: "Vacation Condo for Rent, Mactan Island",
     description:
       "Fully furnished 1-bedroom condo with ocean view on Mactan Island. Beachfront resort amenities, pool, and water sports. Available short-term and long-term. Great for expats and vacationers.",
@@ -403,6 +429,7 @@ const PROPERTIES = [
 
   // ── Mandaue City (3) ───────────────────────────────────────────────────────
   {
+    _slug: "bakilid-corner-lot",
     title: "Corner Lot, Bakilid Mandaue City",
     description:
       "Prime corner lot in a fast-developing residential area of Mandaue City. Flat terrain, ready for construction. Close to major roads, malls, and schools. Clean title, all utilities available.",
@@ -424,6 +451,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "north-reclamation-townhouse",
     title: "2-Storey Townhouse, North Reclamation",
     description:
       "Brand new 3-bedroom townhouse in a secure Mandaue City development. Modern design, 2 parking slots, and a small backyard. Minutes from SM City Cebu and North Reclamation Area.",
@@ -445,6 +473,7 @@ const PROPERTIES = [
     _agent: "jasmine",
   },
   {
+    _slug: "mandaue-warehouse-office",
     title: "Warehouse & Office for Rent, Mandaue",
     description:
       "Semi-industrial warehouse with mezzanine office, 400 sqm. High ceiling, roller door, 3-phase power. In a light industrial zone near the main highway. Ideal for logistics, manufacturing, or cold storage.",
@@ -468,6 +497,7 @@ const PROPERTIES = [
 
   // ── Talisay City (2) ───────────────────────────────────────────────────────
   {
+    _slug: "talisay-townhouse-3br",
     title: "3BR Townhouse, San Isidro Talisay City",
     description:
       "Newly built 3-bedroom townhouse in a quiet, secure subdivision in Talisay City. Modern design, covered parking, private backyard. Minutes from the South Road Properties expressway.",
@@ -489,6 +519,7 @@ const PROPERTIES = [
     _agent: "maria",
   },
   {
+    _slug: "bulacao-house-2br",
     title: "2BR House, Bulacao Talisay City",
     description:
       "Affordable 2-bedroom bungalow on a 150 sqm lot in Bulacao. Tiled throughout, with a garden, storage room, and covered carport. Near South Bus Terminal and South Road Properties.",
@@ -512,6 +543,7 @@ const PROPERTIES = [
 
   // ── Cordova (2) ────────────────────────────────────────────────────────────
   {
+    _slug: "cordova-tropical-house",
     title: "Modern Tropical House, Pilipog Cordova",
     description:
       "Brand new 3-bedroom modern tropical home in the heart of Cordova. Open-concept design, natural ventilation, native wood accents, spacious lanai. Walking distance to local markets and the beach.",
@@ -533,6 +565,7 @@ const PROPERTIES = [
     _agent: "carlo",
   },
   {
+    _slug: "lapu-lapu-seaview-condo",
     title: "2BR Condo with Sea View, Lapu-Lapu",
     description:
       "Sea-view 2-bedroom condo in a mid-rise development near Cordova-Lapu-Lapu boundary. Watch ferries cross the channel from your balcony. Good investment with high rental yield potential.",
@@ -617,25 +650,61 @@ async function main() {
   let skippedCount = 0;
 
   for (const propData of PROPERTIES) {
-    const { _agent, ...property } = propData;
+    const { _agent, _slug, ...property } = propData;
 
-    // Use the property_type for image lookup
-    const imageType = property.property_type;
-
-    // Skip if title already exists
+    // Check if property already exists
     const { data: existing } = await supabase
       .from("properties")
       .select("id")
       .eq("title", property.title)
       .maybeSingle();
 
+    let propertyId;
+
     if (existing) {
-      console.log(`  ⏭️  "${property.title}" — already exists`);
-      skippedCount++;
+      propertyId = existing.id;
+
+      // Check if slug-based images are available on disk
+      const localImages = getLocalImages(property.property_type, _slug);
+      const hasSlugImages = localImages.length > 0 && localImages[0].filename.startsWith(_slug);
+
+      if (!hasSlugImages) {
+        // No new images ready — nothing to update
+        console.log(`  ⏭️  "${property.title}" — already exists, no new images to apply`);
+        skippedCount++;
+        continue;
+      }
+
+      // New slug images are ready — replace old property_images rows
+      const { error: delError } = await supabase
+        .from("property_images")
+        .delete()
+        .eq("property_id", propertyId);
+
+      if (delError) {
+        console.warn(`  ⚠️  "${property.title}" — could not clear old images: ${delError.message}`);
+        skippedCount++;
+        continue;
+      }
+
+      const imageRows = localImages.map(({ filename }, idx) => ({
+        property_id: propertyId,
+        image_url: imageUrlMap[filename] ?? null,
+        is_primary: idx === 0,
+        sort_order: idx,
+      }));
+
+      const { error: imgError } = await supabase.from("property_images").insert(imageRows);
+      if (imgError) {
+        console.warn(`  ⚠️  "${property.title}" images failed: ${imgError.message}`);
+      }
+
+      console.log(`  🔄  "${property.title}" — images refreshed with ${imageRows.length} slug image(s)`);
+      insertedCount++;
       continue;
     }
 
-    // Insert property
+    // Property does not exist yet — insert it
     const agent_id = agentIdMap[_agent] ?? null;
     const { data: inserted, error } = await supabase
       .from("properties")
@@ -648,38 +717,31 @@ async function main() {
       continue;
     }
 
-    const propertyId = inserted.id;
+    propertyId = inserted.id;
 
-    // Build image rows for this property
-    const localImages = getLocalImages(imageType);
-    const angles = Object.keys(localImages);
+    // Build image rows — per-listing slug images first, fallback to type-based
+    const localImages = getLocalImages(property.property_type, _slug);
 
-    if (angles.length === 0) {
-      console.log(`  ✅  "${property.title}" inserted — no images available for type ${imageType}`);
+    if (localImages.length === 0) {
+      console.log(`  ✅  "${property.title}" inserted — no images available`);
       insertedCount++;
       continue;
     }
 
-    const imageRows = angles.map((angle, idx) => {
-      const filename = `${imageType}-${angle}.jpg`;
-      const imageUrl = imageUrlMap[filename] ?? null;
-      return {
-        property_id: propertyId,
-        image_url: imageUrl,
-        is_primary: idx === 0, // first angle (exterior-1) = primary
-        sort_order: idx,
-      };
-    });
+    const imageRows = localImages.map(({ filename }, idx) => ({
+      property_id: propertyId,
+      image_url: imageUrlMap[filename] ?? null,
+      is_primary: idx === 0,
+      sort_order: idx,
+    }));
 
     const { error: imgError } = await supabase.from("property_images").insert(imageRows);
-
     if (imgError) {
       console.warn(`  ⚠️  "${property.title}" images failed: ${imgError.message}`);
     }
 
-    console.log(
-      `  ✅  "${property.title}" — inserted with ${imageRows.length} image(s)`,
-    );
+    const imageSource = localImages[0].filename.startsWith(_slug) ? "slug" : "type-fallback";
+    console.log(`  ✅  "${property.title}" — inserted with ${imageRows.length} image(s) [${imageSource}]`);
     insertedCount++;
   }
 
