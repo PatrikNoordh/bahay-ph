@@ -142,10 +142,12 @@ bahay/BH-07-property-detail
 bahay/BH-10-agent-dashboard
 ***Commit Rules
 All commits must start with [claude] (MODEL_NAME).
+MODEL_NAME must reflect the actual Claude model running the session — never hardcode a model name.
+Examples of valid model names: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5
 First commit on branch:
-[claude] (claude-haiku-4-5) BH-<N> Title Case Description
+[claude] (claude-sonnet-4-6) BH-<N> Title Case Description
 Subsequent commits:
-[claude] (claude-haiku-4-5) [<type>] imperative description
+[claude] (claude-sonnet-4-6) [<type>] imperative description
 Types: feat fix style refactor chore docs perf test
 Rules:
 Imperative tense always
