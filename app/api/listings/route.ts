@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import type { PriceType, PropertyType } from "@/lib/types";
+import type { CreateListingRequest } from "@/lib/api.types";
 
 // POST /api/listings — create a new listing for the authenticated agent
 export async function POST(request: Request) {
@@ -29,20 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Your account is pending verification. You can create listings once approved." }, { status: 403 });
   }
 
-  const body = await request.json() as {
-    title?: string;
-    description?: string;
-    price?: number | string;
-    price_type?: PriceType;
-    property_type?: PropertyType;
-    bedrooms?: number | string | null;
-    bathrooms?: number | string | null;
-    floor_area?: number | string | null;
-    lot_size?: number | string | null;
-    address?: string | null;
-    city?: string;
-    barangay?: string | null;
-  };
+  const body = await request.json() as CreateListingRequest;
 
   // Validate required fields at the API boundary
   if (!body.title?.trim() || !body.price || !body.city?.trim() || !body.price_type || !body.property_type) {

@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import type { SavePropertyRequest, DeleteSavedRequest } from "@/lib/api.types";
 
 // GET /api/saved — return the current user's saved properties (id + property_id)
 export async function GET() {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as { property_id?: string };
+  const body = (await request.json()) as SavePropertyRequest;
 
   if (!body.property_id) {
     return NextResponse.json({ error: "property_id is required" }, { status: 400 });
@@ -82,7 +83,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as { id?: string };
+  const body = (await request.json()) as DeleteSavedRequest;
 
   if (!body.id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
