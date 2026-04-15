@@ -57,3 +57,14 @@ export interface SavePropertyRequest {
 export interface DeleteSavedRequest {
   id?: string;
 }
+
+// ── DELETE /api/saved (bulk) ──────────────────────────────────────────────────
+
+export interface BulkDeleteSavedRequest {
+  ids: string[];
+}
+
+export interface BulkDeleteSavedResponse {
+  succeeded: string[];
+  failed: string[];
+}
