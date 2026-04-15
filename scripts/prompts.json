@@ -1,0 +1,163 @@
+{
+  "_readme": "Two sections: _base_types has the original generic prompts per property type (kept for reuse). listings has unique per-listing prompts for the 19 seeded properties.",
+
+  "_base_types": {
+    "house": {
+      "exterior-1": "Exterior front view of a modern Filipino tropical house, white rendered walls, terracotta roof tiles, lush tropical garden, wooden front door, Cebu Philippines, golden hour afternoon lighting. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-2": "Side angle exterior of a contemporary Filipino family home, open lanai, ceiling fan, narra hardwood accents, manicured lawn, palm trees, Cebu Philippines, bright daylight. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-3": "Aerial view from slight elevation of a single-family house with private pool, tropical garden, Cebu Philippines residential neighbourhood, clear blue sky. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-living": "Bright open-plan living room of a Filipino tropical home, rattan furniture, high ceiling with wooden beams, large windows overlooking garden, natural ventilation. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-bedroom": "Master bedroom in a modern Filipino house, queen bed with white linens, air conditioning unit, wooden floor, sheer curtains with garden view, clean minimal decor. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-kitchen": "Modern kitchen in a Filipino tropical house, white cabinets, granite countertop, open to dining area, indoor plants, natural light. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks"
+    },
+    "condo": {
+      "exterior-1": "Exterior of a modern condominium tower in Cebu City IT Park, glass facade, blue glass curtain wall, landscaped podium, night time with city lights. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-2": "Lobby entrance of a premium residential condominium Cebu City, marble floors, concierge desk, high ceilings, potted tropical plants, daytime. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-3": "Rooftop infinity pool and amenity deck of a high-rise condominium, city skyline and sea view Cebu Philippines, sunset. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-living": "Modern condo living room Cebu City, city view through floor-to-ceiling windows, compact furniture, neutral tones, fully furnished, clean and bright. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-bedroom": "Condo bedroom with city view, built-in wardrobe, air conditioning, double bed with white hotel-style linens, compact but well-designed. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-kitchen": "Open kitchen in a Cebu condo unit, built-in appliances, breakfast bar, integrated refrigerator, white cabinets, compact and modern. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks"
+    },
+    "lot": {
+      "exterior-1": "Aerial drone photo of a cleared flat residential lot for sale Metro Cebu Philippines, corner lot, surrounding houses visible, bright daylight, property boundary markers. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-2": "Street-level view of a residential lot with concrete perimeter fence, Mandaue City Cebu Philippines, paved road in front, mature trees nearby, daytime. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-3": "Wide aerial view of a subdivision lot in Cebu Philippines, quiet neighbourhood, green surroundings, mountains in the background, clear sky. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-living": "Surrounding neighbourhood of a lot for sale Cebu Philippines, well-maintained houses, wide road, trees lining the street, suburban feel, daytime. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-bedroom": "Lot size marker and boundary posts on a cleared land parcel Cebu Philippines, flat terrain, neighbouring properties visible, sunny day. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-kitchen": "Nearby amenities: mall, school, and church visible from a residential area Cebu Philippines, walkable neighbourhood, daytime aerial view. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks"
+    },
+    "townhouse": {
+      "exterior-1": "Row of modern Filipino townhouses, gated community Talisay Cebu, uniform facade, terracotta accents, covered garage, well-maintained landscaping, golden hour. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-2": "Front view single townhouse unit in a Cebu subdivision, 2-storey, painted white and beige, small garden, iron gate, daytime. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-3": "Aerial view of a Filipino townhouse development Cebu Philippines, new phase construction, landscaped common areas, perimeter wall, daylight. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-living": "Townhouse living and dining area Cebu Philippines, open plan, tiled floor, staircase to second floor visible, natural light, modern furniture. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-bedroom": "Second floor master bedroom Filipino townhouse, double bed, built-in closet, window overlooking subdivision, air conditioned, clean and bright. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-kitchen": "Townhouse kitchen Cebu Philippines, granite countertop, overhead cabinets, small breakfast nook, tiled backsplash, natural light from window. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks"
+    },
+    "commercial": {
+      "exterior-1": "Ground-floor commercial shophouse unit Mandaue City Cebu, signage-ready facade, wide glass frontage, busy street, daytime. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-2": "Commercial building exterior Cebu Philippines, ground floor retail space, open frontage, parking area, main road frontage, midday lighting. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "exterior-3": "Mixed-use commercial strip Cebu City, occupied units with signage, active pedestrian street, daytime, tropical urban setting. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-living": "Empty commercial retail space interior Cebu Philippines, polished concrete floor, high ceiling, large shopfront windows, ready for fit-out, daylight. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-bedroom": "Open plan office or commercial space for lease Cebu Philippines, bare concrete ceiling, good natural light, column-free layout. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks",
+      "interior-kitchen": "Back-of-house storage and utility area of a commercial unit Cebu Philippines, concrete walls, basic fittings, electrical panel, service entrance. photorealistic, real estate listing photo, high resolution, natural lighting, no text overlays, no watermarks"
+    }
+  },
+
+  "listings": {
+    "it-park-condo-2br": {
+      "exterior": "Modern high-rise residential tower in Cebu IT Park at dusk, glass and steel facade with warm balcony lights glowing, landscaped podium deck, city skyline backdrop, Cebu Philippines. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Sleek 2-bedroom condo living room in IT Park Cebu, floor-to-ceiling windows with panoramic city view at night, dark wood floors, white sectional sofa, pendant lighting, fully furnished. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Modern master bedroom in IT Park condo, queen bed with white linen, built-in wardrobe with mirrored doors, city lights visible through large window, neutral grey palette, air conditioned. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Compact open-plan kitchen in Cebu IT Park condo, glossy white cabinets, quartz countertop with bar stools, stainless appliances, open to living area, natural light. photorealistic, interior real estate photo, no text overlays"
+    },
+    "lahug-studio-condo": {
+      "exterior": "Mid-rise residential condominium building in Lahug Cebu City, clean white facade, surrounded by mature trees, daytime, quiet residential street, Cebu Philippines. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Bright studio condo unit in Lahug Cebu, open layout with compact sofa and dining nook, large window with garden view, light wood flooring, freshly painted white walls, airy and cozy. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Studio sleeping area with built-in single bed platform, storage drawers underneath, sheer white curtains, small bedside table, minimalist and functional. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Compact studio kitchen in Lahug Cebu, under-counter fridge, two-burner induction stove, wall-mounted cabinets, small sink, clean and practical. photorealistic, interior real estate photo, no text overlays"
+    },
+    "banilad-family-home": {
+      "exterior": "Two-storey Filipino family home in Banilad Cebu City, cream painted walls, clay tile roof, covered carport for two cars, mature bougainvillea along the fence, bright midday sun. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Spacious family living room in a Banilad Cebu house, L-shaped rattan sofa, ceiling fan, large flat-screen TV, terrazzo floor tiles, natural light through wide jalousie windows. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Large master bedroom on the second floor, king bed with wooden headboard, walk-in closet entrance, air conditioning unit, window overlooking garden with palm trees, warm afternoon light. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Bright Filipino family kitchen in Banilad Cebu, wooden upper cabinets, tile countertop, gas range, laundry area at back, open to dining room, natural daylight. photorealistic, interior real estate photo, no text overlays"
+    },
+    "ayala-condo-1br": {
+      "exterior": "Premium residential tower in Cebu Business Park Ayala area, sleek dark glass curtain wall, manicured entrance garden, luxury hotel-like lobby visible, golden hour lighting. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Fully furnished 1-bedroom condo in Cebu Business Park, contemporary furniture set, accent wall with artwork, balcony with CBD view, warm ambient lighting, move-in ready. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "1BR condo bedroom in Ayala Cebu, queen bed with upholstered headboard, bedside tables with reading lamps, built-in wardrobe, blackout curtains, air conditioned, quiet and elegant. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Compact kitchen in Ayala area condo, imported tile backsplash, built-in oven and microwave, breakfast counter with pendant lights, integrated dishwasher, polished finish. photorealistic, interior real estate photo, no text overlays"
+    },
+    "talamban-corner-lot": {
+      "exterior": "Aerial view of a flat corner lot for sale in Talamban Cebu City, concrete perimeter fence on two sides, mature trees on adjacent properties, paved road at the corner, residential neighbourhood, bright daylight. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Street view of Talamban Cebu neighbourhood, clean wide road, neighbouring residential houses with gardens, peaceful suburban setting, daytime. photorealistic, real estate photo, no text overlays",
+      "bedroom": "Corner lot boundary markers visible in Talamban Cebu, flat cleared terrain, survey pegs at corners, neighbouring rooftops visible, bright sunny day. photorealistic, real estate photo, no text overlays",
+      "kitchen": "Nearby University of San Carlos Talamban campus gate visible, tree-lined road, students walking, accessible and developed neighbourhood in Cebu City. photorealistic, real estate photo, no text overlays"
+    },
+    "beverly-hills-luxury-house": {
+      "exterior": "Stunning luxury house in Beverly Hills Subdivision Busay Cebu City, hillside location, panoramic city and sea view in the background, infinity pool at the side, manicured tropical garden, white modern architecture, golden hour. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Grand open-plan living room of a luxury hilltop house in Cebu, soaring double-height ceilings, wall-to-wall glass overlooking Cebu city and sea, marble floors, designer furniture, dramatic and elegant. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master suite in Beverly Hills Cebu luxury home, super king bed with linen headboard, private balcony with panoramic view, en-suite bathroom entrance visible, walk-in wardrobe, refined and spacious. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Chef-grade kitchen in Cebu luxury hillside home, island bench with marble top, sub-zero fridge, six-burner gas range, wine cooler, custom cabinetry, pendant lights, premium finishes throughout. photorealistic, interior real estate photo, no text overlays"
+    },
+    "it-park-studio-condo": {
+      "exterior": "Residential condominium building inside Cebu IT Park, modern architecture with glass balconies, landscaped street level with cafe and retail, BPO towers visible in background, daytime. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Cozy studio condo for sale in IT Park Cebu, smart layout with sofa bed, compact workspace corner, city view from the window, neutral white and grey tones, natural light in the morning. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Studio sleeping corner in IT Park Cebu unit, single bed with storage, under-bed drawers, wall-mounted shelving, blackout blind on window, clean and organised. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Studio kitchen nook in IT Park condo Cebu, single-row layout, ceramic tile backsplash, compact appliances, open shelf above countertop, efficient use of space. photorealistic, interior real estate photo, no text overlays"
+    },
+    "colon-commercial-space": {
+      "exterior": "Ground floor commercial shopfront on Colon Street Cebu City, busy urban pedestrian street, wide glass display window, roll-up shutter door open, adjacent active retail shops, midday activity. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Empty commercial retail interior on Colon Street Cebu, high ceiling with exposed concrete, polished cement floor, large glass frontage letting in street light, open plan ready for fit-out. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Back office area of Colon Street commercial space, basic concrete walls, fluorescent lighting, utility door, separate from retail floor, practical storage space. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Service area and pantry at the back of a Colon Street Cebu shophouse, utility sink, basic shelving, metre box, service entrance door, clean and functional. photorealistic, interior real estate photo, no text overlays"
+    },
+    "punta-engano-beachfront-villa": {
+      "exterior": "Stunning beachfront villa in Punta Engano Mactan Island, direct white sand beach access, private pool facing turquoise sea, tropical garden with palm trees, open-air sala, golden hour. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Dramatic open-plan living area of beachfront villa Punta Engano, retractable floor-to-ceiling glass doors open to the sea, natural materials: teak, rattan, linen, panoramic ocean view, cool sea breeze. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom of Mactan beachfront villa, four-poster bed with white canopy, private terrace with direct ocean view, en-suite bathroom with freestanding tub, warm tropical morning light. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Gourmet kitchen in Punta Engano beachfront villa, large island bench, professional gas range, view to garden and sea through the window, white marble surfaces, open to dining veranda. photorealistic, interior real estate photo, no text overlays"
+    },
+    "mactan-newtown-condo-3br": {
+      "exterior": "Residential tower in Mactan Newtown Lapu-Lapu City, modern mixed-use development, resort-style amenity deck with pool visible, sea visible in the background, Mactan Island Cebu, daytime. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Spacious 3-bedroom condo living room in Mactan Newtown, corner unit with two-sided sea view windows, contemporary furniture, neutral beige tones, resort-style feel, fully furnished. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in Mactan Newtown 3BR condo, sea view from the window, king bed with white hotel linens, blackout curtains, built-in wardrobe, air conditioning, clean and bright. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Open plan kitchen and dining in Mactan Newtown condo, island bench with bar stools, stainless appliances, white lacquer cabinets, pendant lighting above dining table, sea glimpse through window. photorealistic, interior real estate photo, no text overlays"
+    },
+    "mactan-airport-lot": {
+      "exterior": "Aerial drone photo of a flat residential lot near Mactan-Cebu International Airport, concrete perimeter fence, paved subdivision road, neighbouring OFW houses with gardens, clear blue sky. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Quiet residential street near Mactan Airport Pajac Lapu-Lapu, well-maintained houses with carports, tree-lined road, peaceful suburban neighbourhood, afternoon light. photorealistic, real estate photo, no text overlays",
+      "bedroom": "Cleared lot in Pajac Lapu-Lapu near airport, survey stakes at corners, flat compacted earth, adjacent property fence visible, good access road, bright sunny day. photorealistic, real estate photo, no text overlays",
+      "kitchen": "View toward Mactan-Cebu International Airport runway from a nearby residential area, planes visible in distance, developed infrastructure, accessible urban setting. photorealistic, real estate photo, no text overlays"
+    },
+    "mactan-vacation-condo": {
+      "exterior": "Beachfront or near-beach low-rise resort condominium in Maribago Mactan Island, lush tropical landscaping, outdoor pool, white sand beach access path, vacation resort atmosphere, bright sunshine. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Vacation condo living area in Maribago Mactan, tropical rattan furniture, sliding doors open to private balcony with sea view, ceiling fan, colourful throw pillows, relaxed holiday mood. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Vacation condo bedroom in Mactan Island, twin beds with tropical print linens, ceiling fan, balcony door open letting in sea breeze, natural woven materials, bright and breezy. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Compact kitchenette in Mactan vacation condo, small fridge, two-burner cooktop, basic utensils, enough for holiday cooking, opening to living area, bright natural light. photorealistic, interior real estate photo, no text overlays"
+    },
+    "bakilid-corner-lot": {
+      "exterior": "Corner lot for sale in Bakilid Mandaue City, flat terrain, concrete hollow block fence on two street sides, neighbours visible, near main road, active developing area, daytime. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Busy main road near Bakilid Mandaue City, commercial establishments and residential houses mixed, good road infrastructure, urban conveniences nearby, traffic and activity. photorealistic, real estate photo, no text overlays",
+      "bedroom": "Lot corner stakes in Bakilid Mandaue, cleared earth, flat and level, ready for construction, perimeter fence on two sides, neighbouring properties visible, clear sky. photorealistic, real estate photo, no text overlays",
+      "kitchen": "Nearby SM Hypermarket Mandaue and commercial area visible from Bakilid neighbourhood, convenience of shopping and services, active urban environment in Mandaue City. photorealistic, real estate photo, no text overlays"
+    },
+    "north-reclamation-townhouse": {
+      "exterior": "Two-storey townhouse in North Reclamation Area Mandaue City, white and terracotta painted facade, covered garage, small garden in front, row of identical units with slight variations, evening light. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Modern townhouse ground floor living and dining area in North Reclamation Mandaue, open plan, tiled floor, staircase with glass balustrade, split air conditioner, natural light from front window. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Second floor master bedroom of Mandaue townhouse, queen bed with headboard, built-in closet, window with sheer curtains, ceiling light, freshly painted, move-in ready. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Townhouse kitchen in North Reclamation Mandaue, L-shaped layout, dark granite countertop, upper wooden cabinets, stainless sink, door to small laundry area at back. photorealistic, interior real estate photo, no text overlays"
+    },
+    "mandaue-warehouse-office": {
+      "exterior": "Industrial warehouse and office building in Tipolo Mandaue City, wide roller door entrance, concrete perimeter wall, loading area, delivery truck parked outside, functional industrial exterior, daytime. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Spacious warehouse floor in Mandaue City, high ceiling with steel trusses, smooth concrete floor, fluorescent strip lighting, loading dock at back, wide clear span, industrial. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Office mezzanine area above warehouse floor, glass partition walls, workstations visible, air conditioning, overlooking warehouse below, functional commercial interior. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Staff pantry and utility room in Mandaue warehouse facility, stainless sink, wall cabinets, basic appliances, concrete walls, functional and clean. photorealistic, interior real estate photo, no text overlays"
+    },
+    "talisay-townhouse-3br": {
+      "exterior": "Three-bedroom townhouse in San Isidro Talisay City, gated community entrance visible in background, tan and white facade, tiled front yard, carport with roof, tropical plants at entrance, late afternoon. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Spacious townhouse living room in Talisay City, light grey tiled floor, L-shaped sofa, large flat-screen TV, split-type air conditioner, sliding door to small rear garden, bright and airy. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in San Isidro Talisay townhouse, king bed with wooden platform frame, built-in wardrobe, window with garden view, ceiling fan and air conditioning, comfortable family home feel. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Family kitchen in Talisay City townhouse, wooden lower cabinets, light-coloured countertop, gas range, overhead exhaust, door to rear service area, bright morning light. photorealistic, interior real estate photo, no text overlays"
+    },
+    "bulacao-house-2br": {
+      "exterior": "Two-bedroom house in Bulacao Talisay City, single-storey, concrete hollow block construction with plastered finish, small garden, iron gate, carport for one car, Talisay residential area, midday. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Cozy living room in a Bulacao Talisay house, small sofa set, ceiling fan, jalousie windows, terrazzo floor, simple and clean Filipino home interior, natural daylight. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Modest but comfortable master bedroom in Talisay City house, double bed, wooden wardrobe, window with curtain, cool tiled floor, simple and tidy Filipino home style. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Home kitchen in Bulacao Talisay, concrete countertop, simple wooden cabinets above, gas range, small window to outside, clean and functional Filipino residential kitchen. photorealistic, interior real estate photo, no text overlays"
+    },
+    "cordova-tropical-house": {
+      "exterior": "Modern tropical house in Pilipog Cordova Cebu, island setting, white rendered walls, deep roof overhangs, wrap-around timber deck, lush tropical garden with palms and heliconias, afternoon sun. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Airy tropical living room in Cordova Cebu house, high vaulted ceiling with exposed timber beams, large sliding doors open to deck and garden, natural rattan furniture, indoor plants, sea breeze ambience. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in Cordova tropical house, four-poster teak bed, white mosquito net, louvred windows for ventilation, ceiling fan, polished concrete floor, lush garden view, tropical paradise feel. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Tropical house kitchen in Cordova Cebu, open to outdoor dining area, concrete island bench, bamboo upper shelves, large window overlooking garden, ceramic tile backsplash, natural and organic materials. photorealistic, interior real estate photo, no text overlays"
+    },
+    "lapu-lapu-seaview-condo": {
+      "exterior": "Residential condominium building in Gabi Cordova near the sea, low-rise resort-style development, sea visible from the upper floors, tropical landscaping with coconut palms, blue sky and ocean backdrop. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Sea-view condo living room in Lapu-Lapu Cordova area, balcony door open to panoramic ocean view, light blue and white colour palette echoing the sea, modern furniture, fresh and breezy. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "2-bedroom condo master room with sea view in Cordova Cebu, queen bed facing large window overlooking the ocean, white linens, wooden floor, soft morning light reflecting off the water. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Condo kitchen with sea view glimpse in Cordova Lapu-Lapu, white cabinets, light stone countertop, stainless sink below a window with ocean visible, bright and clean, island lifestyle feel. photorealistic, interior real estate photo, no text overlays"
+    }
+  }
+}
