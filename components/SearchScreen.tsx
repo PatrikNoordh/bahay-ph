@@ -6,6 +6,10 @@ import type { Listing } from "@/lib/types";
 import { PropertyCard } from "@/components/PropertyCard";
 import { SkeletonPropertyCard } from "@/components/ui/Skeleton";
 
+// Price range defaults — differ between sale (total) and rent (monthly)
+const SALE_PRICE_CONFIG = { min: 500_000, max: 50_000_000, suffix: "" } as const;
+const RENT_PRICE_CONFIG = { min: 5_000, max: 150_000, suffix: "/mo" } as const;
+
 // Filter options — values map to URL param values expected by the server
 const LISTING_TYPE_OPTIONS = [
   { value: "", label: "📋 Any type" },
@@ -79,6 +83,14 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
   // Local state for the text input — syncs with URL on Enter/blur
   const [localQ, setLocalQ] = useState(searchParams.get("q") ?? "");
 
+  // AC1, AC2 — price range local state; initialised from URL params
+  const [localPriceMin, setLocalPriceMin] = useState(searchParams.get("priceMin") ?? "");
+  const [localPriceMax, setLocalPriceMax] = useState(searchParams.get("priceMax") ?? "");
+
+  // AC1, AC3 — derive price config from current listingType param
+  const isRent = searchParams.get("listingType") === "rent";
+  const priceConfig = isRent ? RENT_PRICE_CONFIG : SALE_PRICE_CONFIG;
+
   // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus();
@@ -105,9 +117,30 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
     updateParam("q", localQ.trim());
   }
 
+  // AC4 — switching listing type resets price range to correct defaults
+  function updateListingType(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("listingType", value);
+    } else {
+      params.delete("listingType");
+    }
+    // Reset price range so defaults match the new type
+    params.delete("priceMin");
+    params.delete("priceMax");
+    params.delete("page");
+    setLocalPriceMin("");
+    setLocalPriceMax("");
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
+  }
+
   // Clear every filter and search param (including page)
   function clearAllFilters() {
     setLocalQ("");
+    setLocalPriceMin("");
+    setLocalPriceMax("");
     startTransition(() => {
       router.push(pathname);
     });
@@ -147,11 +180,12 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
       </div>
 
       {/* AC5 — Filter pills: update URL params on change, active state from URL */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3 no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto px-4 pb-2 no-scrollbar">
+        {/* AC4 — listingType uses specialized handler that resets price range */}
         <FilterSelect
           value={searchParams.get("listingType") ?? ""}
           options={LISTING_TYPE_OPTIONS}
-          onChange={(v) => updateParam("listingType", v)}
+          onChange={updateListingType}
         />
         <FilterSelect
           value={searchParams.get("type") ?? ""}
@@ -168,6 +202,45 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
           options={SORT_OPTIONS}
           onChange={(v) => updateParam("sort", v)}
         />
+      </div>
+
+      {/* AC1, AC2, AC3 — Price range inputs; defaults and "/mo" label adapt to listingType */}
+      <div className="flex items-center gap-1.5 px-4 pb-3">
+        <span className="text-xs text-muted shrink-0">₱</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder={priceConfig.min.toLocaleString("en-PH")}
+          value={localPriceMin}
+          onChange={(e) => setLocalPriceMin(e.target.value)}
+          onBlur={() => updateParam("priceMin", localPriceMin)}
+          onKeyDown={(e) => { if (e.key === "Enter") updateParam("priceMin", localPriceMin); }}
+          min={0}
+          className={`w-full rounded-full px-3 py-1.5 text-xs border outline-none transition-colors duration-150 bg-white text-narra ${
+            localPriceMin ? "border-primary" : "border-sand-dark"
+          }`}
+          aria-label="Minimum price"
+        />
+        <span className="text-xs text-muted shrink-0">–</span>
+        <span className="text-xs text-muted shrink-0">₱</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder={priceConfig.max.toLocaleString("en-PH")}
+          value={localPriceMax}
+          onChange={(e) => setLocalPriceMax(e.target.value)}
+          onBlur={() => updateParam("priceMax", localPriceMax)}
+          onKeyDown={(e) => { if (e.key === "Enter") updateParam("priceMax", localPriceMax); }}
+          min={0}
+          className={`w-full rounded-full px-3 py-1.5 text-xs border outline-none transition-colors duration-150 bg-white text-narra ${
+            localPriceMax ? "border-primary" : "border-sand-dark"
+          }`}
+          aria-label="Maximum price"
+        />
+        {/* AC3 — "/mo" suffix shown only for rent */}
+        {isRent && (
+          <span className="text-xs text-muted shrink-0">/mo</span>
+        )}
       </div>
 
       {/* AC4 — Result count: "Showing N of total properties" */}
