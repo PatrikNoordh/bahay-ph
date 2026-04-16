@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { Listing } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -16,21 +16,56 @@ const DynamicLeafletMap = dynamic(
   }
 );
 
+type ListingTypeFilter = "all" | "sale" | "rent";
+
+const TYPE_PILLS: { label: string; value: ListingTypeFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "For Sale", value: "sale" },
+  { label: "For Rent", value: "rent" },
+];
+
 interface MapScreenProps {
   listings: Listing[];
+  initialListingType?: ListingTypeFilter;
 }
 
-export function MapScreen({ listings }: MapScreenProps) {
+export function MapScreen({ listings, initialListingType = "all" }: MapScreenProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [listingType, setListingType] = useState<ListingTypeFilter>(initialListingType);
+
+  function selectType(type: ListingTypeFilter) {
+    setListingType(type);
+    setSelectedId(null);
+    // AC5 — sync listingType to URL query param
+    const params = new URLSearchParams(searchParams.toString());
+    if (type === "all") {
+      params.delete("listingType");
+    } else {
+      params.set("listingType", type);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  // Client-side filter by listing type (badge-based, mirrors FilterTabs logic)
+  function matchesType(listing: Listing): boolean {
+    if (listingType === "all") return true;
+    if (listingType === "sale") return listing.badge === "For Sale" || listing.badge === "New";
+    if (listingType === "rent") return listing.badge === "For Rent";
+    return true;
+  }
 
   // Refs for strip card scroll-into-view (AC3)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   // Ref for double-tap detection on pins (AC4)
   const lastTapRef = useRef<{ id: string; time: number } | null>(null);
 
-  // Listings that have real coordinates — only these appear on the Leaflet map
-  const mappableListings = listings.filter(
+  // Client-side filter by listing type, then restrict to coordinate-bearing listings
+  const filteredListings = listings.filter(matchesType);
+  const mappableListings = filteredListings.filter(
     (l) => l.lat !== null && l.lng !== null
   );
 
@@ -64,13 +99,39 @@ export function MapScreen({ listings }: MapScreenProps) {
         actions={[{ icon: "🔍", label: "Search", href: "/search" }]}
       />
 
+      {/* AC1, AC5 — For Sale / For Rent / All toggle pills, overlaid above map */}
+      <div className="absolute top-14 left-0 right-0 z-[1000] flex justify-center px-4 pt-2 pointer-events-none">
+        <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1.5 shadow-[var(--shadow-card)] pointer-events-auto">
+          {TYPE_PILLS.map(({ label, value }) => {
+            const isActive = listingType === value;
+            let activeClass = "bg-[var(--terra)] text-white";
+            if (value === "rent" && isActive) activeClass = "bg-[var(--ocean)] text-white";
+            if (value === "all" && isActive) activeClass = "bg-[var(--narra)] text-white";
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => selectType(value)}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 ${
+                  isActive ? activeClass : "text-muted hover:bg-sand-dark"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* AC9, AC10 — Leaflet tile map fills the full screen */}
       <div className="absolute inset-0">
         {mappableListings.length === 0 ? (
-          // Edge case: no listings with coordinates
+          // Edge case: no listings with coordinates (incl. empty after filter)
           <div className="absolute inset-0 bg-lime-100 flex items-center justify-center">
             <p className="text-muted text-sm bg-white/80 rounded-xl px-4 py-2 shadow-[var(--shadow-card)]">
-              No listings available
+              {listingType === "all"
+                ? "No listings available"
+                : `No ${listingType === "rent" ? "rental" : "sale"} listings on the map`}
             </p>
           </div>
         ) : (
@@ -90,7 +151,7 @@ export function MapScreen({ listings }: MapScreenProps) {
             // Prevent strip scroll from triggering map pan
             onTouchStart={(e) => e.stopPropagation()}
           >
-            {listings.map((listing) => (
+            {filteredListings.map((listing) => (
               <div
                 key={listing.id}
                 ref={(el) => {
