@@ -158,6 +158,30 @@
       "living": "Sea-view condo living room in Lapu-Lapu Cordova area, balcony door open to panoramic ocean view, light blue and white colour palette echoing the sea, modern furniture, fresh and breezy. photorealistic, interior real estate photo, no text overlays",
       "bedroom": "2-bedroom condo master room with sea view in Cordova Cebu, queen bed facing large window overlooking the ocean, white linens, wooden floor, soft morning light reflecting off the water. photorealistic, interior real estate photo, no text overlays",
       "kitchen": "Condo kitchen with sea view glimpse in Cordova Lapu-Lapu, white cabinets, light stone countertop, stainless sink below a window with ocean visible, bright and clean, island lifestyle feel. photorealistic, interior real estate photo, no text overlays"
+    },
+    "mabolo-2br-house-rent": {
+      "exterior": "Two-bedroom bungalow for rent in Mabolo Cebu City, freshly painted cream walls, small porch with potted plants, iron gate, single carport, quiet residential street with mature trees, bright midday. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Comfortable living room in a Mabolo Cebu rental house, light grey tiled floor, rattan sofa set with cushions, ceiling fan, split-type aircon, window with garden view, clean and homey. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Rental house master bedroom in Mabolo Cebu City, double bed with wooden frame, built-in wardrobe, window with sheer curtains, cool tiled floor, air conditioned, tidy and move-in ready. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Bright kitchen in Mabolo Cebu rental house, wooden overhead cabinets, tiled countertop, gas range, small window above the sink, open to dining area, practical Filipino home kitchen. photorealistic, interior real estate photo, no text overlays"
+    },
+    "it-park-3br-condo-rent": {
+      "exterior": "Premium high-rise condominium tower in Cebu IT Park, sleek glass and steel facade, lush podium garden, residents' lobby entrance, BPO towers and city skyline visible, golden hour lighting. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Spacious 3-bedroom condo living and dining area in IT Park Cebu, floor-to-ceiling windows with panoramic city view, designer furniture, open plan layout, hardwood floors, warm ambient lighting. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in IT Park 3BR rental condo, king bed with upholstered headboard, walk-in wardrobe entrance, city view from large window, en-suite bathroom door visible, sophisticated and elegant. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Premium kitchen in IT Park Cebu rental condo, island bench with bar stools, imported stone countertop, stainless integrated appliances, pendant lighting, open to dining area, executive finish. photorealistic, interior real estate photo, no text overlays"
+    },
+    "guadalupe-townhouse-rent": {
+      "exterior": "Three-bedroom townhouse for rent in Guadalupe Cebu City, white two-storey facade with terracotta roof, small garden at front, iron gate, covered parking for one car, quiet suburban street, afternoon sun. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Townhouse living and dining area in Guadalupe Cebu, open plan ground floor, light grey ceramic tiles, staircase to second floor, split-type aircon, sofa set and dining table, bright natural light from front windows. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in Guadalupe Cebu townhouse rental, queen bed with wooden headboard, built-in wardrobe, window overlooking quiet street, ceiling fan and aircon, freshly painted and move-in ready. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Townhouse kitchen for rent in Guadalupe Cebu City, L-shaped layout, wooden cabinets, granite countertop, gas range, small window to rear garden, open to dining area, clean and functional. photorealistic, interior real estate photo, no text overlays"
+    },
+    "banilad-furnished-house-rent": {
+      "exterior": "Large 4-bedroom furnished house for rent in Banilad Cebu City, two-storey modern design, cream rendered walls, wide covered driveway for three cars, manicured garden with bougainvillea, late afternoon light. photorealistic, real estate photo, high resolution, no text overlays, no watermarks",
+      "living": "Elegantly furnished living room of a Banilad Cebu expat rental house, high ceiling, leather sofa set, large flat-screen TV, narra hardwood floor, wide glass doors opening to garden lanai, designer lamps. photorealistic, interior real estate photo, no text overlays",
+      "bedroom": "Master bedroom in Banilad furnished rental house Cebu, king bed with hotel-quality linens, walk-in closet, en-suite bathroom visible, large window with garden view, air conditioned, refined and comfortable. photorealistic, interior real estate photo, no text overlays",
+      "kitchen": "Large fully equipped kitchen in Banilad Cebu furnished house, European-style cabinets, granite island, double-door fridge, built-in oven and microwave, open to bright dining area and garden, premium rental finish. photorealistic, interior real estate photo, no text overlays"
     }
   }
 }
