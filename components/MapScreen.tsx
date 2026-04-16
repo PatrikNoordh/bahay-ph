@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { getStoredIntent, setStoredIntent } from "@/lib/listingTypeIntent";
 import type { Listing } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -34,12 +35,20 @@ export function MapScreen({ listings, initialListingType = "all" }: MapScreenPro
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [listingType, setListingType] = useState<ListingTypeFilter>(initialListingType);
+  // AC3 (BH-72) — if no URL param (initialListingType="all"), restore from sessionStorage
+  const [listingType, setListingType] = useState<ListingTypeFilter>(() => {
+    if (initialListingType !== "all") return initialListingType;
+    if (typeof window !== "undefined") {
+      const stored = getStoredIntent();
+      if (stored) return stored;
+    }
+    return "all";
+  });
 
   function selectType(type: ListingTypeFilter) {
     setListingType(type);
     setSelectedId(null);
-    // AC5 — sync listingType to URL query param
+    // AC5 (BH-68) — sync listingType to URL query param
     const params = new URLSearchParams(searchParams.toString());
     if (type === "all") {
       params.delete("listingType");
@@ -48,6 +57,8 @@ export function MapScreen({ listings, initialListingType = "all" }: MapScreenPro
     }
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
+    // AC1/AC5 (BH-72) — persist explicit sale/rent selection
+    if (type === "sale" || type === "rent") setStoredIntent(type);
   }
 
   // Client-side filter by listing type (badge-based, mirrors FilterTabs logic)

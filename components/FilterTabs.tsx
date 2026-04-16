@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PropertyCard } from "./PropertyCard";
 import type { Listing } from "@/lib/types";
+import { setStoredIntent } from "@/lib/listingTypeIntent";
 
 const TABS = ["All", "For Sale", "For Rent", "Lots", "Condos"] as const;
 type Tab = (typeof TABS)[number];
@@ -60,6 +61,10 @@ export function FilterTabs({ listings, limit }: FilterTabsProps) {
     const qs = params.toString();
     // AC4/AC5 — Empty/default filters produce a clean URL
     router.replace(qs ? `${pathname}?${qs}` : pathname);
+
+    // AC1 (BH-72) — persist listing type intent for cross-page carrying
+    if (tab === "For Sale") setStoredIntent("sale");
+    if (tab === "For Rent") setStoredIntent("rent");
   }
 
   // Client-side filter for the home page "New Listings" section
