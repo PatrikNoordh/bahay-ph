@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { getStoredIntent, setStoredIntent } from "@/lib/listingTypeIntent";
+import { getStoredIntent, setStoredIntent, subscribeToIntent } from "@/lib/listingTypeIntent";
 import type { Listing } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -35,18 +35,23 @@ export function MapScreen({ listings, initialListingType = "all" }: MapScreenPro
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // AC3 (BH-72) — if no URL param (initialListingType="all"), restore from sessionStorage
-  const [listingType, setListingType] = useState<ListingTypeFilter>(() => {
-    if (initialListingType !== "all") return initialListingType;
-    if (typeof window !== "undefined") {
-      const stored = getStoredIntent();
-      if (stored) return stored;
-    }
-    return "all";
-  });
+  // AC3 (BH-72) — track explicit user selections (including "all") in local state
+  // null means "no explicit selection yet — defer to URL param or sessionStorage"
+  const [localType, setLocalType] = useState<ListingTypeFilter | null>(null);
+
+  // Read sessionStorage with SSR-safe useSyncExternalStore; server snapshot is null
+  const storedIntent = useSyncExternalStore<"sale" | "rent" | null>(
+    subscribeToIntent,
+    getStoredIntent,
+    () => null
+  );
+
+  // Effective type: explicit user selection wins, then URL param, then sessionStorage
+  const listingType: ListingTypeFilter =
+    localType ?? (initialListingType !== "all" ? initialListingType : (storedIntent ?? "all"));
 
   function selectType(type: ListingTypeFilter) {
-    setListingType(type);
+    setLocalType(type);
     setSelectedId(null);
     // AC5 (BH-68) — sync listingType to URL query param
     const params = new URLSearchParams(searchParams.toString());
