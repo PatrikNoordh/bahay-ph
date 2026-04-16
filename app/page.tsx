@@ -6,6 +6,7 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { AnimateIn } from "@/components/ui/AnimateIn";
 import { FilterTabs } from "@/components/FilterTabs";
 import { Topbar } from "@/components/Topbar";
+import { HeroSearch } from "@/components/HeroSearch";
 import type { Property, PropertyImage, Agent } from "@/lib/types";
 
 const AREA_CHIPS = [
@@ -105,14 +106,8 @@ export default async function Home() {
             Find your home<br />in Cebu
           </h1>
 
-          {/* AC7 — tappable search bar navigates to /search */}
-          <Link
-            href="/search"
-            className="flex items-center gap-2 bg-white rounded-[12px] px-3 py-2.5 mb-4"
-          >
-            <span className="text-muted text-sm" aria-hidden="true">🔍</span>
-            <span className="text-muted text-sm flex-1">Search Cebu listings...</span>
-          </Link>
+          {/* AC1–AC4 — Sale/Rent toggle + tappable search bar */}
+          <HeroSearch />
 
           {/* AC1 + AC7 — 4 area quick-filter tags */}
           <div className="flex gap-2 flex-wrap">
