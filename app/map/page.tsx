@@ -3,7 +3,14 @@ import { propertyToListing, buildImageMap, buildAgentMap } from "@/lib/listingHe
 import { MapScreen } from "@/components/MapScreen";
 import type { Property, PropertyImage, Agent } from "@/lib/types";
 
-export default async function MapPage() {
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ listingType?: string }>;
+}) {
+  const { listingType: rawListingType } = await searchParams;
+  const listingType =
+    rawListingType === "sale" || rawListingType === "rent" ? rawListingType : "all";
   const supabase = await createServerSupabaseClient();
 
   // Fetch all active listings that have coordinates for the map
@@ -41,5 +48,5 @@ export default async function MapPage() {
     propertyToListing(prop, imageMap[prop.id] ?? [], agentMap[prop.agent_id ?? ""] ?? null, i)
   );
 
-  return <MapScreen listings={listings} />;
+  return <MapScreen listings={listings} initialListingType={listingType} />;
 }
