@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { type ListingIntent, getStoredIntent, setStoredIntent } from "@/lib/listingTypeIntent";
+import { type ListingIntent, getStoredIntent, setStoredIntent, subscribeToIntent } from "@/lib/listingTypeIntent";
 
 const TOGGLE_OPTIONS: { label: string; value: ListingIntent }[] = [
   { label: "For Sale", value: "sale" },
@@ -10,18 +10,20 @@ const TOGGLE_OPTIONS: { label: string; value: ListingIntent }[] = [
 ];
 
 // AC1–AC4 — Hero toggle pill + tappable search bar
-// Toggle defaults to "For Sale"; restores sessionStorage value on mount
+// Toggle defaults to "For Sale"; syncs with sessionStorage via useSyncExternalStore
 export function HeroSearch() {
   const router = useRouter();
-  // AC3 (BH-72) — restore persisted intent from sessionStorage; lazy initializer is
-  // client-only so it reads the real value; falls back to "sale" on SSR or empty storage
-  const [intent, setIntentState] = useState<ListingIntent>(
-    () => (typeof window !== "undefined" ? getStoredIntent() ?? "sale" : "sale")
+  // AC3 (BH-72) — server snapshot null, client reads sessionStorage; fallback "sale"
+  // When user toggles, setStoredIntent dispatches INTENT_CHANGE_EVENT → re-render
+  const stored = useSyncExternalStore<ListingIntent | null>(
+    subscribeToIntent,
+    getStoredIntent,
+    () => null
   );
+  const intent: ListingIntent = stored ?? "sale";
 
   function handleToggle(value: ListingIntent) {
-    setIntentState(value);
-    // AC1 (BH-72) — persist intent for cross-page carrying
+    // AC1 (BH-72) — persist intent and notify subscribers (triggers re-render via store)
     setStoredIntent(value);
   }
 

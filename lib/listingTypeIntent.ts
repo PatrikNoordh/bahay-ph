@@ -7,6 +7,15 @@ export type ListingIntent = "sale" | "rent";
 export const STORAGE_KEY = "bahay_listing_type";
 export const INTENT_CHANGE_EVENT = "bahay:intent-change";
 
+/**
+ * useSyncExternalStore-compatible subscribe function.
+ * Notifies subscribers whenever setStoredIntent() is called on the same page.
+ */
+export function subscribeToIntent(callback: () => void): () => void {
+  window.addEventListener(INTENT_CHANGE_EVENT, callback);
+  return () => window.removeEventListener(INTENT_CHANGE_EVENT, callback);
+}
+
 /** Returns the stored intent for this session, or null if none has been explicitly set. */
 export function getStoredIntent(): ListingIntent | null {
   try {

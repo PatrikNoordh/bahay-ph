@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import {
   type ListingIntent,
   getStoredIntent,
-  INTENT_CHANGE_EVENT,
+  subscribeToIntent,
 } from "@/lib/listingTypeIntent";
 
 const BASE_NAV_ITEMS = [
@@ -22,20 +22,13 @@ const INTENT_ROUTES = new Set(["/search", "/map"]);
 
 export function BottomNav() {
   const pathname = usePathname();
-  // AC2 (BH-72) — track active intent to append to Search/Map hrefs
-  // Lazy initializer reads sessionStorage on client; null on SSR or empty storage
-  const [intent, setIntent] = useState<ListingIntent | null>(
-    () => (typeof window !== "undefined" ? getStoredIntent() : null)
+  // AC2 (BH-72) — read intent from sessionStorage; server snapshot is null so SSR
+  // and client agree on first render, then hydrates to the real stored value
+  const intent = useSyncExternalStore<ListingIntent | null>(
+    subscribeToIntent,
+    getStoredIntent,
+    () => null
   );
-
-  // Stay in sync when any component on the same page changes the intent
-  useEffect(() => {
-    function handleIntentChange(e: Event) {
-      setIntent((e as CustomEvent<ListingIntent>).detail);
-    }
-    window.addEventListener(INTENT_CHANGE_EVENT, handleIntentChange);
-    return () => window.removeEventListener(INTENT_CHANGE_EVENT, handleIntentChange);
-  }, []);
 
   // AC8 — hidden on property detail pages
   if (pathname.startsWith("/property/")) return null;
