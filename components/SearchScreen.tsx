@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useTransition } from "react";
+import { getStoredIntent, setStoredIntent } from "@/lib/listingTypeIntent";
 import type { Listing } from "@/lib/types";
 import { PropertyCard } from "@/components/PropertyCard";
 import { SkeletonPropertyCard } from "@/components/ui/Skeleton";
@@ -88,12 +89,35 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
   const [localPriceMax, setLocalPriceMax] = useState(searchParams.get("priceMax") ?? "");
 
   // AC1, AC3 — derive price config from current listingType param
-  const isRent = searchParams.get("listingType") === "rent";
+  const currentListingType = searchParams.get("listingType");
+  const isRent = currentListingType === "rent";
   const priceConfig = isRent ? RENT_PRICE_CONFIG : SALE_PRICE_CONFIG;
+
+  // AC5 (BH-72) — persist intent whenever user explicitly sets listingType
+  useEffect(() => {
+    if (currentListingType === "sale" || currentListingType === "rent") {
+      setStoredIntent(currentListingType);
+    }
+  }, [currentListingType]);
 
   // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // AC3 (BH-72) — restore listing type intent from sessionStorage on mount
+  // Only applies when no listingType URL param is present (direct nav / refresh without param)
+  useEffect(() => {
+    if (!searchParams.get("listingType")) {
+      const stored = getStoredIntent();
+      if (stored) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("listingType", stored);
+        router.replace(`${pathname}?${params.toString()}`);
+      }
+    }
+    // Run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Build a new URL with one param updated (or removed if value is empty)
