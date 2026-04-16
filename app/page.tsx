@@ -20,25 +20,39 @@ const AREA_CHIPS = [
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
 
-  // Fetch featured listings
-  const { data: featuredProps } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("status", "active")
-    .eq("is_featured", true)
-    .order("created_at", { ascending: false })
-    .limit(6);
-
-  // Fetch newest listings for the grid (capped at 12 for home page)
-  const { data: newProps } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(12);
+  // Fetch featured listings, featured rentals, and newest listings in parallel
+  const [
+    { data: featuredProps },
+    { data: featuredRentalProps },
+    { data: newProps },
+  ] = await Promise.all([
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("is_featured", true)
+      .order("created_at", { ascending: false })
+      .limit(6),
+    // AC2 — featured rentals: is_featured=true AND price_type=rent
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("is_featured", true)
+      .eq("price_type", "rent")
+      .order("created_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(12),
+  ]);
 
   const allProps = [
     ...(featuredProps ?? []),
+    ...(featuredRentalProps ?? []),
     ...(newProps ?? []),
   ] as Property[];
 
@@ -65,6 +79,11 @@ export default async function Home() {
   const agentMap = buildAgentMap((agentRows ?? []) as Agent[]);
 
   const featuredListings = (featuredProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+
+  // AC2 — featured rental listings for the dedicated section
+  const featuredRentalListings = (featuredRentalProps ?? [] as Property[]).map((p, i) =>
     propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
   );
 
@@ -180,8 +199,26 @@ export default async function Home() {
         )}
       </AnimateIn>
 
+      {/* ── AC1: Featured Rentals ─────────────────────────────── */}
+      {/* AC3 — section hidden entirely when no featured rentals exist */}
+      {featuredRentalListings.length > 0 && (
+        <AnimateIn delay={200} className="mt-5">
+          <div className="flex items-center justify-between px-4 mb-2">
+            <h2 className="font-display font-semibold text-base text-narra">Featured Rentals</h2>
+            <Link href="/search?listingType=rent" className="text-xs text-ocean font-medium">
+              See all
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory no-scrollbar">
+            {featuredRentalListings.map((listing) => (
+              <PropertyCard key={listing.id} listing={listing} variant="featured" />
+            ))}
+          </div>
+        </AnimateIn>
+      )}
+
       {/* ── AC5: New Listings (filter tabs + grid) ─────────────── */}
-      <AnimateIn delay={200} className="mt-5">
+      <AnimateIn delay={250} className="mt-5">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="font-display font-semibold text-base text-narra">New Listings</h2>
           <Link href="/search" className="text-xs text-primary font-medium">
