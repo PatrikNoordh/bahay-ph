@@ -21,11 +21,15 @@ const AREA_CHIP_DEFS = [
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
 
-  // Fetch featured listings, featured rentals, newest listings, and stats in parallel
+  // Fetch featured listings, featured rentals, newest listings, per-tab listings, and stats in parallel
   const [
     { data: featuredProps },
     { data: featuredRentalProps },
     { data: newProps },
+    { data: saleProps },
+    { data: rentProps },
+    { data: lotProps },
+    { data: condoProps },
     { count: totalActiveCount },
     { data: citiesData },
     { count: verifiedAgentCount },
@@ -46,10 +50,43 @@ export default async function Home() {
       .eq("price_type", "rent")
       .order("created_at", { ascending: false })
       .limit(6),
+    // New Listings "All" tab
     supabase
       .from("properties")
       .select("*")
       .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(12),
+    // New Listings "For Sale" tab
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("price_type", "sale")
+      .order("created_at", { ascending: false })
+      .limit(12),
+    // New Listings "For Rent" tab
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("price_type", "rent")
+      .order("created_at", { ascending: false })
+      .limit(12),
+    // New Listings "Lots" tab
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("property_type", "lot")
+      .order("created_at", { ascending: false })
+      .limit(12),
+    // New Listings "Condos" tab
+    supabase
+      .from("properties")
+      .select("*")
+      .eq("status", "active")
+      .eq("property_type", "condo")
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
@@ -83,6 +120,10 @@ export default async function Home() {
     ...(featuredProps ?? []),
     ...(featuredRentalProps ?? []),
     ...(newProps ?? []),
+    ...(saleProps ?? []),
+    ...(rentProps ?? []),
+    ...(lotProps ?? []),
+    ...(condoProps ?? []),
   ] as Property[];
 
   // De-duplicate so we don't double-fetch images for featured that also appear in new
@@ -119,6 +160,27 @@ export default async function Home() {
   const newListings = (newProps ?? [] as Property[]).map((p, i) =>
     propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
   );
+
+  const saleListings = (saleProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+  const rentListings = (rentProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+  const lotListings = (lotProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+  const condoListings = (condoProps ?? [] as Property[]).map((p, i) =>
+    propertyToListing(p as Property, imageMap[p.id] ?? [], agentMap[p.agent_id ?? ""] ?? null, i)
+  );
+
+  const listingsByTab = {
+    All:          newListings,
+    "For Sale":   saleListings,
+    "For Rent":   rentListings,
+    Lots:         lotListings,
+    Condos:       condoListings,
+  };
 
   return (
     // AC8 — bottom padding to clear BottomNav
@@ -248,7 +310,7 @@ export default async function Home() {
         </div>
         {newListings.length > 0 ? (
           <Suspense fallback={<div className="h-[200px] bg-sand animate-pulse rounded-[14px] mx-4" />}>
-            <FilterTabs listings={newListings} limit={12} />
+            <FilterTabs listingsByTab={listingsByTab} />
           </Suspense>
         ) : (
           <div className="px-4 py-8 text-center text-sm text-muted">
