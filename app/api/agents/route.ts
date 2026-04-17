@@ -2,6 +2,15 @@ import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // POST /api/agents — create or update the authenticated user's agent profile
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -85,13 +94,13 @@ export async function POST(request: Request) {
         <h2>New Broker Registration</h2>
         <p>A new broker has submitted their profile for verification on Bahay.ph.</p>
         <table>
-          <tr><td><strong>Name</strong></td><td>${full_name}</td></tr>
-          <tr><td><strong>Phone</strong></td><td>${phone}</td></tr>
-          <tr><td><strong>Company</strong></td><td>${body.company_name?.trim() || "—"}</td></tr>
+          <tr><td><strong>Name</strong></td><td>${escapeHtml(full_name)}</td></tr>
+          <tr><td><strong>Phone</strong></td><td>${escapeHtml(phone)}</td></tr>
+          <tr><td><strong>Company</strong></td><td>${escapeHtml(body.company_name?.trim() || "—")}</td></tr>
           <tr><td><strong>Years exp.</strong></td><td>${years_experience ?? "—"}</td></tr>
-          <tr><td><strong>PRC Licence</strong></td><td>${prc_license_number}</td></tr>
-          <tr><td><strong>Email</strong></td><td>${user.email ?? "—"}</td></tr>
-          <tr><td><strong>User ID</strong></td><td>${user.id}</td></tr>
+          <tr><td><strong>PRC Licence</strong></td><td>${escapeHtml(prc_license_number)}</td></tr>
+          <tr><td><strong>Email</strong></td><td>${escapeHtml(user.email ?? "—")}</td></tr>
+          <tr><td><strong>User ID</strong></td><td>${escapeHtml(user.id)}</td></tr>
         </table>
         <p>Log in to Supabase and set <code>is_verified = true</code> on their agents row to approve.</p>
       `,
