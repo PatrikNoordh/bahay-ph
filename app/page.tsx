@@ -9,23 +9,26 @@ import { Topbar } from "@/components/Topbar";
 import { HeroSearch } from "@/components/HeroSearch";
 import type { Property, PropertyImage, Agent } from "@/lib/types";
 
-const AREA_CHIPS = [
-  { emoji: "🏙️", name: "Cebu City", count: 124 },
-  { emoji: "🌴", name: "Cordova", count: 18 },
-  { emoji: "🏭", name: "Mandaue", count: 42 },
-  { emoji: "✈️", name: "Mactan", count: 31 },
-  { emoji: "🐟", name: "Lapu-Lapu", count: 27 },
-  { emoji: "🏘️", name: "Talisay", count: 6 },
+const AREA_CHIP_DEFS = [
+  { emoji: "🏙️", name: "Cebu City" },
+  { emoji: "🌴", name: "Cordova" },
+  { emoji: "🏭", name: "Mandaue" },
+  { emoji: "✈️", name: "Mactan" },
+  { emoji: "🐟", name: "Lapu-Lapu" },
+  { emoji: "🏘️", name: "Talisay" },
 ];
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
 
-  // Fetch featured listings, featured rentals, and newest listings in parallel
+  // Fetch featured listings, featured rentals, newest listings, and stats in parallel
   const [
     { data: featuredProps },
     { data: featuredRentalProps },
     { data: newProps },
+    { count: totalActiveCount },
+    { data: citiesData },
+    { count: verifiedAgentCount },
   ] = await Promise.all([
     supabase
       .from("properties")
@@ -49,7 +52,32 @@ export default async function Home() {
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(12),
+    supabase
+      .from("properties")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("properties")
+      .select("city")
+      .eq("status", "active"),
+    supabase
+      .from("agents")
+      .select("*", { count: "exact", head: true })
+      .eq("is_verified", true),
   ]);
+
+  const cityCountMap = (citiesData ?? []).reduce<Record<string, number>>((acc, row) => {
+    acc[row.city] = (acc[row.city] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const areaChips = AREA_CHIP_DEFS.map(({ emoji, name }) => ({
+    emoji,
+    name,
+    count: cityCountMap[name] ?? 0,
+  }));
+
+  const distinctCityCount = Object.keys(cityCountMap).length;
 
   const allProps = [
     ...(featuredProps ?? []),
@@ -126,12 +154,11 @@ export default async function Home() {
 
       {/* ── AC2: Stats Strip ───────────────────────────────────── */}
       <AnimateIn delay={50} className="mx-3 mt-3">
-        {/* TODO: connect to Supabase — real counts via COUNT queries */}
         <div className="bg-white rounded-[14px] shadow-[var(--shadow-card)] px-4 py-3 flex justify-around">
           {[
-            { value: "248", label: "Active Listings" },
-            { value: "12", label: "Cities" },
-            { value: "45", label: "Trusted Agents" },
+            { value: String(totalActiveCount ?? 0), label: "Active Listings" },
+            { value: String(distinctCityCount), label: "Cities" },
+            { value: String(verifiedAgentCount ?? 0), label: "Trusted Agents" },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
               <p className="text-lg font-bold text-narra font-display">{value}</p>
@@ -150,9 +177,8 @@ export default async function Home() {
             See all
           </Link>
         </div>
-        {/* TODO: connect to Supabase — real listing counts per city */}
         <div className="flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
-          {AREA_CHIPS.map(({ emoji, name, count }) => (
+          {areaChips.map(({ emoji, name, count }) => (
             <Link
               key={name}
               href={`/search?city=${encodeURIComponent(name)}`}
