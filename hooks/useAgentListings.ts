@@ -34,11 +34,11 @@ export function useAgentListings(): UseAgentListingsResult {
 
       const supabase = createBrowserSupabaseClient();
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // No session — return empty list, not an error
-      if (!session) {
+      // No authenticated user — return empty list, not an error
+      if (!user) {
         if (!cancelled) {
           setListings([]);
           setLoading(false);
@@ -49,7 +49,7 @@ export function useAgentListings(): UseAgentListingsResult {
       const { data: agent, error: agentError } = await supabase
         .from("agents")
         .select("id")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (cancelled) return;
