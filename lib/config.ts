@@ -58,11 +58,4 @@ export function getServiceRoleKey(): string {
   return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 }
 
-/**
- * Linear API key — server-only for direct API calls.
- * Never expose this to the client. Use in API routes and server actions only.
- */
-export function getLinearApiKey(): string {
-  return requireEnv("LINEAR_API_KEY");
-}
 
