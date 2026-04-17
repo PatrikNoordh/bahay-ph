@@ -39,11 +39,18 @@ export async function signUp(
   const redirectTo = raw.startsWith("/") ? raw : "/profile";
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) return { error: error.message };
 
-  // Supabase may require email confirmation — surface a friendly message
+  // session is null when Supabase requires email confirmation
+  if (!data.session) {
+    return {
+      error: null,
+      message: "Check your email to confirm your account before signing in.",
+    };
+  }
+
   redirect(redirectTo);
 }
 

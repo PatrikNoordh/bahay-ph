@@ -215,20 +215,32 @@ export function AuthForm({ redirectTo, urlError }: AuthFormProps) {
           </div>
         )}
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full bg-primary text-white font-medium text-sm rounded-[12px] py-3.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60"
-        >
-          {isPending
-            ? mode === "signin"
-              ? "Signing in…"
-              : "Creating account…"
-            : mode === "signin"
-            ? "Sign in"
-            : "Create account"}
-        </button>
+        {/* Email confirmation required — shown after sign-up when session is null */}
+        {mode === "signup" && state?.message && (
+          <div
+            role="status"
+            className="mb-4 bg-green/10 text-green text-sm rounded-[12px] px-3 py-2.5"
+          >
+            {state.message}
+          </div>
+        )}
+
+        {/* Submit — hidden once email confirmation message is shown */}
+        {!(mode === "signup" && state?.message) && (
+          <button
+            type="submit"
+            disabled={isPending}
+            className="w-full bg-primary text-white font-medium text-sm rounded-[12px] py-3.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60"
+          >
+            {isPending
+              ? mode === "signin"
+                ? "Signing in…"
+                : "Creating account…"
+              : mode === "signin"
+              ? "Sign in"
+              : "Create account"}
+          </button>
+        )}
       </form>
     </div>
   );
