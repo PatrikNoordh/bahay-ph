@@ -120,9 +120,9 @@ export function MapScreen({ listings, initialListingType = "all" }: MapScreenPro
         <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1.5 shadow-[var(--shadow-card)] pointer-events-auto">
           {TYPE_PILLS.map(({ label, value }) => {
             const isActive = listingType === value;
-            let activeClass = "bg-[var(--terra)] text-white";
-            if (value === "rent" && isActive) activeClass = "bg-[var(--ocean)] text-white";
-            if (value === "all" && isActive) activeClass = "bg-[var(--narra)] text-white";
+            let activeClass = "bg-primary text-white";
+            if (value === "rent" && isActive) activeClass = "bg-ocean text-white";
+            if (value === "all" && isActive) activeClass = "bg-narra text-white";
             return (
               <button
                 key={value}
