@@ -59,7 +59,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
-        className={`w-full max-w-[420px] pointer-events-auto rounded-t-[20px] bg-sand shadow-[var(--shadow-card)] transition-transform duration-300 max-h-[80dvh] overflow-y-auto ${
+        className={`w-full max-w-[420px] pointer-events-auto rounded-t-[20px] bg-sand shadow-[var(--shadow-card)] transition-transform duration-300 h-[100dvh] md:h-[92dvh] overflow-y-auto ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
