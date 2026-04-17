@@ -30,13 +30,11 @@ function tabFromParams(
 }
 
 interface FilterTabsProps {
-  listings: Listing[];
-  // AC3 — optional cap on displayed results (used on home page)
-  limit?: number;
+  listingsByTab: Record<Tab, Listing[]>;
 }
 
 // AC5 — Client Component; tab state synced to URL params via router.replace()
-export function FilterTabs({ listings, limit }: FilterTabsProps) {
+export function FilterTabs({ listingsByTab }: FilterTabsProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -67,19 +65,7 @@ export function FilterTabs({ listings, limit }: FilterTabsProps) {
     if (tab === "For Rent") setStoredIntent("rent");
   }
 
-  // Client-side filter for the home page "New Listings" section
-  // TODO: connect to Supabase — replace with server-filtered props (Phase 2)
-  const allFiltered = listings.filter((l) => {
-    if (activeTab === "All") return true;
-    if (activeTab === "For Sale") return l.badge === "For Sale" || l.badge === "New";
-    if (activeTab === "For Rent") return l.badge === "For Rent";
-    if (activeTab === "Lots") return l.type === "lot";
-    if (activeTab === "Condos") return l.type === "condo";
-    return true;
-  });
-
-  // AC3 — cap at limit when provided (home page shows max 12)
-  const filtered = limit !== undefined ? allFiltered.slice(0, limit) : allFiltered;
+  const filtered = listingsByTab[activeTab];
 
   return (
     <div>
