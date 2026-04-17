@@ -97,7 +97,7 @@ export interface PropertyDetail extends Property {
 }
 
 // ============================================================
-// UI display type — used by mock data and future useListings hook
+// UI display types
 // ============================================================
 
 export interface ListingAgent {
