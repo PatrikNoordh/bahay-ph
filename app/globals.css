@@ -35,6 +35,15 @@
   --nav-height: 64px;
 }
 
+/* ── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] {
+  --color-sand:      #1C1410;
+  --color-sand-dark: #2A1F18;
+  --color-narra:     #F0E8DF;
+  --color-muted:     #9A8A7E;
+  --color-muted-light: #7A6A5E;
+}
+
 /* ── Base styles ─────────────────────────────────────────── */
 body {
   background-color: var(--color-sand);
