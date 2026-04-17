@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { propertyToListing, buildImageMap, buildAgentMap } from "@/lib/listingHelpers";
-import { Topbar } from "@/components/Topbar";
+import { SearchTopbar } from "@/components/SearchTopbar";
 import { SearchScreen } from "@/components/SearchScreen";
 import type { Property, PropertyImage, Agent, PropertyType } from "@/lib/types";
 
@@ -132,7 +132,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="min-h-[100dvh] pb-16">
-      <Topbar actions={[{ icon: "⚙️", label: "Settings" }]} />
+      <SearchTopbar />
 
       <Suspense
         fallback={
