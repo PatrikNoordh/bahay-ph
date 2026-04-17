@@ -246,19 +246,8 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
   // ── Single remove ──────────────────────────────────────────────────────────
 
   const handleRemove = useCallback(async (savedId: string) => {
-    // Optimistic remove
+    // Trigger exit animation immediately via CSS transitions on the removing set
     setRemoving((prev) => new Set(prev).add(savedId));
-    const prev = items;
-
-    // Delay actual removal for animation
-    setTimeout(() => {
-      setItems((current) => current.filter((i) => i.savedId !== savedId));
-      setRemoving((current) => {
-        const next = new Set(current);
-        next.delete(savedId);
-        return next;
-      });
-    }, 250);
 
     try {
       const res = await fetch("/api/saved", {
@@ -268,8 +257,7 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
       });
 
       if (!res.ok) {
-        // Revert on failure
-        setItems(prev);
+        // API failed — clear animation state, item stays in list
         setRemoving((current) => {
           const next = new Set(current);
           next.delete(savedId);
@@ -278,11 +266,19 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
         setError("Failed to remove. Please try again.");
         showToast("Failed to remove property.", "error");
       } else {
+        // Success — remove from list after CSS transition completes (250ms)
+        setTimeout(() => {
+          setItems((current) => current.filter((i) => i.savedId !== savedId));
+          setRemoving((current) => {
+            const next = new Set(current);
+            next.delete(savedId);
+            return next;
+          });
+        }, 250);
         showToast("Property removed from saved.", "success");
       }
     } catch {
-      // Revert on network error
-      setItems(prev);
+      // Network error — clear animation state, item stays in list
       setRemoving((current) => {
         const next = new Set(current);
         next.delete(savedId);
@@ -291,7 +287,7 @@ export function SavedScreen({ initialItems }: SavedScreenProps) {
       setError("Failed to remove. Please try again.");
       showToast("Failed to remove property.", "error");
     }
-  }, [items, showToast]);
+  }, [showToast]);
 
   // ── Selection mode helpers ─────────────────────────────────────────────────
 
