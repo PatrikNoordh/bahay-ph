@@ -17,7 +17,8 @@ export async function signIn(
 ): Promise<AuthState> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const redirectTo = (formData.get("redirectTo") as string) || "/profile";
+  const raw = (formData.get("redirectTo") as string) || "/profile";
+  const redirectTo = raw.startsWith("/") ? raw : "/profile";
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -34,7 +35,8 @@ export async function signUp(
 ): Promise<AuthState> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const redirectTo = (formData.get("redirectTo") as string) || "/profile";
+  const raw = (formData.get("redirectTo") as string) || "/profile";
+  const redirectTo = raw.startsWith("/") ? raw : "/profile";
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.auth.signUp({ email, password });
