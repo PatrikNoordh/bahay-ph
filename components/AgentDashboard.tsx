@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { ImageUploader } from "@/components/ImageUploader";
 import { useToast } from "@/components/ui/Toast";
 import type { Property, PropertyImage, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
@@ -362,10 +362,7 @@ export function AgentDashboard({ agentId, isVerified, initialListings, initialPr
     async (propertyId: string, currentImageCount: number): Promise<string | null> => {
       if (pendingFiles.length === 0) return null;
 
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createBrowserSupabaseClient();
       let firstUrl: string | null = null;
 
       // AC8 — initialise progress
