@@ -42,21 +42,24 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — scoped to app container */}
       <div
-        className={`fixed inset-0 z-40 bg-narra/40 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 flex items-end justify-center transition-opacity duration-300 ${
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={handleClose}
         aria-hidden="true"
-      />
+      >
+        <div className="absolute inset-0 bg-narra/40" />
+      </div>
 
-      {/* Sheet */}
+      {/* Sheet — constrained to app container width */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
-        className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-[20px] bg-sand shadow-[var(--shadow-card)] transition-transform duration-300 max-h-[80dvh] overflow-y-auto ${
+        className={`w-full max-w-[420px] pointer-events-auto rounded-t-[20px] bg-sand shadow-[var(--shadow-card)] transition-transform duration-300 max-h-[80dvh] overflow-y-auto ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -183,6 +186,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </>
   );
