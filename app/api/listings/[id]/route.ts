@@ -20,6 +20,32 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
+
+  // Defence-in-depth ownership check independent of RLS
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "No agent profile found" }, { status: 403 });
+  }
+
+  const { data: listing } = await supabase
+    .from("properties")
+    .select("agent_id")
+    .eq("id", id)
+    .single();
+
+  if (!listing) {
+    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+  }
+
+  if (listing.agent_id !== agent.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json() as UpdateListingRequest;
 
   // AC7 — Server-side validation mirroring client rules (only validate fields present in body)
@@ -107,6 +133,31 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
+
+  // Defence-in-depth ownership check independent of RLS
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "No agent profile found" }, { status: 403 });
+  }
+
+  const { data: listing } = await supabase
+    .from("properties")
+    .select("agent_id")
+    .eq("id", id)
+    .single();
+
+  if (!listing) {
+    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+  }
+
+  if (listing.agent_id !== agent.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { error } = await supabase.from("properties").delete().eq("id", id);
 
