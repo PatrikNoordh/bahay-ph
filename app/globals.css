@@ -10,8 +10,13 @@
   --color-sand:          #F8F3EC;
   --color-sand-dark:     #EDE5D8;
   --color-narra:         #2C1A0E;
-  --color-muted:         #7A6A5E;
-  --color-muted-light:   #A89888;
+  --color-muted:         #6C5D53;
+  --color-muted-light:   #796d62;
+
+  /* Short-name aliases used by older utilities */
+  --narra: var(--color-narra);
+  --muted: var(--color-muted);
+  --muted-light: var(--color-muted-light);
 
   /* ── Typography ──────────────────────────────────────── */
   --font-display: var(--font-playfair), Georgia, serif;
@@ -42,6 +47,11 @@
   --color-narra:     #F0E8DF;
   --color-muted:     #9A8A7E;
   --color-muted-light: #7A6A5E;
+
+  /* Short-name aliases */
+  --narra: var(--color-narra);
+  --muted: var(--color-muted);
+  --muted-light: var(--color-muted-light);
 }
 
 /* ── Base styles ─────────────────────────────────────────── */
@@ -141,3 +151,17 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Quick a11y overrides — high contrast helpers for Profile page */
+.hc-text {
+  color: var(--color-narra, #2C1A0E) !important;
+}
+.hc-text-strong {
+  color: var(--color-narra, #2C1A0E) !important;
+  font-weight: 600 !important;
+}
+/* Ensure Tailwind text-narra always resolves to the token (fallback provided) */
+.text-narra {
+  color: var(--color-narra, #2C1A0E) !important;
+}
+

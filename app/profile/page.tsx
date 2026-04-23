@@ -121,7 +121,7 @@ export default async function ProfilePage() {
   const menuGroups = buildMenuGroups(isLoggedIn, isBroker);
 
   return (
-    <div className="pb-16">
+    <div id="profile-root" className="pb-16">
       <Topbar />
 
       {/* AC1, AC2, AC4 — Hero changes based on auth state */}
@@ -184,7 +184,7 @@ export default async function ProfilePage() {
             key={label}
             delay={groupIdx === 0 ? 50 : groupIdx === 1 ? 100 : 150}
           >
-            <p className="uppercase text-[11px] text-muted-light tracking-widest mb-2 px-1">
+            <p className="uppercase text-[11px] text-narra tracking-widest mb-2 px-1 hc-text-strong">
               {label}
             </p>
 
@@ -194,7 +194,7 @@ export default async function ProfilePage() {
                 <Link
                   key={itemLabel}
                   href={href}
-                  className="w-full bg-white rounded-xl p-4 mb-1.5 flex items-center gap-3 active:scale-[0.98] active:bg-sand-dark transition-all duration-100 last:mb-0"
+                  className="w-full bg-sand-dark rounded-xl p-4 mb-1.5 flex items-center gap-3 text-narra hc-text active:scale-[0.98] active:bg-sand-dark transition-all duration-100 last:mb-0"
                 >
                   <div
                     className={`w-[38px] h-[38px] rounded-[10px] ${iconBg} flex items-center justify-center flex-shrink-0`}
@@ -203,10 +203,10 @@ export default async function ProfilePage() {
                       {icon}
                     </span>
                   </div>
-                  <span className="flex-1 text-[14px] font-medium text-narra text-left">
+                  <span className="flex-1 text-[14px] font-medium text-narra text-left font-semibold hc-text">
                     {itemLabel}
                   </span>
-                  <span className="text-muted-light text-lg leading-none" aria-hidden="true">
+                  <span className="text-narra text-lg leading-none hc-text" aria-hidden="true">
                     ›
                   </span>
                 </Link>

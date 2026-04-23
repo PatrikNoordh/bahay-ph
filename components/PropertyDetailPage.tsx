@@ -203,7 +203,7 @@ export function PropertyDetailPage({ listing, relatedListings = [] }: PropertyDe
 
               {/* AC2 — photo count badge (top-right, when multiple) */}
               {hasMultiple && (
-                <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[11px] font-medium rounded-full px-2.5 py-1 backdrop-blur-sm">
+                <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[11px] font-medium rounded-full px-2.5 py-1 backdrop-blur-sm">
                   {activeIndex + 1} / {images.length}
                 </div>
               )}
@@ -413,7 +413,7 @@ export function PropertyDetailPage({ listing, relatedListings = [] }: PropertyDe
                       href={whatsAppUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-green text-white rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-green text-narra rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
                     >
                       <span aria-hidden="true">💬</span> Chat
                     </a>

@@ -34,7 +34,7 @@ function getBadge(property: Property): { badge: string; badgeClass: string } {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const isNew = new Date(property.created_at) > cutoff;
   if (property.price_type === "rent") return { badge: "For Rent", badgeClass: "bg-ocean text-white" };
-  if (isNew) return { badge: "New", badgeClass: "bg-green text-white" };
+  if (isNew) return { badge: "New", badgeClass: "bg-green text-narra" };
   return { badge: "For Sale", badgeClass: "bg-primary text-white" };
 }
 
