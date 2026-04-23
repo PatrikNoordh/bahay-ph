@@ -45,13 +45,15 @@ interface FilterSelectProps {
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }
 
-function FilterSelect({ value, options, onChange }: FilterSelectProps) {
+function FilterSelect({ value, options, onChange, ariaLabel }: FilterSelectProps) {
   const isActive = value !== "";
   return (
     <select
       value={value}
+      aria-label={ariaLabel ?? options[0]?.label ?? "Filter"}
       onChange={(e) => onChange(e.target.value)}
       className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium border outline-none cursor-pointer transition-colors duration-150 ${
         isActive
@@ -210,21 +212,25 @@ export function SearchScreen({ listings, totalCount, currentPage }: SearchScreen
           value={searchParams.get("listingType") ?? ""}
           options={LISTING_TYPE_OPTIONS}
           onChange={updateListingType}
+          ariaLabel="Listing type"
         />
         <FilterSelect
           value={searchParams.get("type") ?? ""}
           options={PROPERTY_TYPE_OPTIONS}
           onChange={(v) => updateParam("type", v)}
+          ariaLabel="Property type"
         />
         <FilterSelect
           value={searchParams.get("beds") ?? ""}
           options={BEDS_OPTIONS}
           onChange={(v) => updateParam("beds", v)}
+          ariaLabel="Bedrooms"
         />
         <FilterSelect
           value={searchParams.get("sort") ?? ""}
           options={SORT_OPTIONS}
           onChange={(v) => updateParam("sort", v)}
+          ariaLabel="Sort order"
         />
       </div>
 

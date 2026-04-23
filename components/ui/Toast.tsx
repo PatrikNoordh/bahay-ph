@@ -74,7 +74,7 @@ function ToastBanner({ message, variant, onDismiss }: ToastBannerProps) {
   // AC5 — success = green token, error = primary (terra) token
   const colorClass =
     variant === "success"
-      ? "bg-green text-white"
+      ? "bg-green text-narra"
       : "bg-primary text-white";
 
   return (
