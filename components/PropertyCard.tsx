@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Listing } from "@/lib/types";
+import { useSavedProperty } from "@/hooks/useSavedProperties";
+
+// Sand-colored 1×1 SVG blur placeholder matching the Bahay.ph design system
+const SAND_BLUR =
+  "data:image/svg+xml;base64,PHN2Zz48cmVjdCBmaWxsPSIjRjhGM0VDIiBpZHRoaD0iMSIgaGVpZ2h0PSIxIi8+PC9zdmc+";
 
 export interface PropertyCardProps {
   listing: Listing;
@@ -11,8 +16,7 @@ export interface PropertyCardProps {
 
 // AC1 — accepts Listing (UI display type) and variant
 export function PropertyCard({ listing, variant }: PropertyCardProps) {
-  // AC6 — heart toggle state; TODO: connect to Supabase saved_properties (Phase 2 — AC12)
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggle } = useSavedProperty(listing.id);
 
   const isLotOnly = listing.beds === null && listing.baths === null;
 
@@ -29,17 +33,16 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
   const heart = (
     <button
       type="button"
-      aria-label={saved ? "Remove from saved" : "Save property"}
+      aria-label={isSaved ? "Remove from saved" : "Save property"}
       className="absolute top-[10px] right-[10px] w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center active:scale-[0.92] transition-transform duration-100"
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setSaved((s) => !s);
-        // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC12)
+        void toggle();
       }}
     >
       <span aria-hidden="true" className="text-sm leading-none">
-        {saved ? "❤️" : "🤍"}
+        {isSaved ? "❤️" : "🤍"}
       </span>
     </button>
   );
@@ -52,8 +55,19 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
         // AC8 — whole card navigates; AC9 — press scale; snap-start for horizontal scroll
         className="block w-[260px] flex-shrink-0 snap-start rounded-[14px] bg-white overflow-hidden shadow-[var(--shadow-card)] active:scale-[0.97] transition-all duration-200"
       >
-        {/* AC2 — image 150px tall */}
-        <div className={`relative h-[150px] ${listing.img}`}>
+        {/* AC2 — image 150px tall; next/image when URL available, gradient fallback otherwise */}
+        <div className={`relative h-[150px] ${listing.image_url ? "bg-sand" : listing.img}`}>
+          {listing.image_url && (
+            <Image
+              src={listing.image_url}
+              alt={listing.name}
+              fill
+              sizes="260px"
+              className="object-cover"
+              placeholder="blur"
+              blurDataURL={SAND_BLUR}
+            />
+          )}
           {badge}
           {heart}
         </div>
@@ -94,8 +108,19 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
         // AC8, AC9
         className="block w-full rounded-[14px] bg-white overflow-hidden shadow-[var(--shadow-card)] active:scale-[0.97] transition-all duration-200"
       >
-        {/* AC3 — image 120px tall */}
-        <div className={`relative h-[120px] ${listing.img}`}>
+        {/* AC3 — image 120px tall; next/image when URL available, gradient fallback otherwise */}
+        <div className={`relative h-[120px] ${listing.image_url ? "bg-sand" : listing.img}`}>
+          {listing.image_url && (
+            <Image
+              src={listing.image_url}
+              alt={listing.name}
+              fill
+              sizes="(max-width: 768px) 50vw, 400px"
+              className="object-cover"
+              placeholder="blur"
+              blurDataURL={SAND_BLUR}
+            />
+          )}
           {badge}
           {heart}
         </div>
@@ -137,8 +162,19 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
       // AC8, AC9 — horizontal card for map screen
       className="flex items-center gap-3 bg-white rounded-[14px] overflow-hidden shadow-[var(--shadow-card)] active:scale-[0.97] transition-all duration-200 p-0"
     >
-      {/* AC4 — 80px image on left */}
-      <div className={`relative h-20 w-20 flex-shrink-0 ${listing.img}`}>
+      {/* AC4 — 80px image on left; next/image when URL available, gradient fallback otherwise */}
+      <div className={`relative h-20 w-20 flex-shrink-0 ${listing.image_url ? "bg-sand" : listing.img}`}>
+        {listing.image_url && (
+          <Image
+            src={listing.image_url}
+            alt={listing.name}
+            fill
+            sizes="80px"
+            className="object-cover"
+            placeholder="blur"
+            blurDataURL={SAND_BLUR}
+          />
+        )}
         {badge}
       </div>
 
@@ -159,17 +195,16 @@ export function PropertyCard({ listing, variant }: PropertyCardProps) {
       <div className="pr-3 flex-shrink-0">
         <button
           type="button"
-          aria-label={saved ? "Remove from saved" : "Save property"}
+          aria-label={isSaved ? "Remove from saved" : "Save property"}
           className="w-8 h-8 rounded-full bg-sand flex items-center justify-center active:scale-[0.92] transition-transform duration-100"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setSaved((s) => !s);
-            // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC12)
+            void toggle();
           }}
         >
           <span aria-hidden="true" className="text-sm leading-none">
-            {saved ? "❤️" : "🤍"}
+            {isSaved ? "❤️" : "🤍"}
           </span>
         </button>
       </div>

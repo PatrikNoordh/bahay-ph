@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase";
 import { Topbar } from "@/components/Topbar";
 import { SavedScreen } from "@/components/SavedScreen";
 import type { Property } from "@/lib/types";
+import type { Tables } from "@/lib/database.types";
 import type { SavedItem } from "@/components/SavedScreen";
 
 // AC1 — Protected: middleware redirects unauthenticated users; this is defence-in-depth
@@ -25,10 +26,12 @@ export default async function SavedPage() {
 
   // Flatten into SavedItem[] — filter out orphans (property deleted after saving)
   const items: SavedItem[] = (rows ?? [])
-    .filter((row) => row.properties !== null)
+    .filter((row): row is typeof row & { properties: Tables<"properties"> } =>
+      row.properties !== null
+    )
     .map((row) => ({
       savedId: row.id,
-      property: row.properties as unknown as Property,
+      property: row.properties as Property,
     }));
 
   return (

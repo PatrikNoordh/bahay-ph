@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import type { PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import type { TablesUpdate } from "@/lib/database.types";
+import type { UpdateListingRequest } from "@/lib/api.types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,27 +20,77 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const body = await request.json() as {
-    title?: string;
-    description?: string | null;
-    price?: number | string;
-    price_type?: PriceType;
-    property_type?: PropertyType;
-    bedrooms?: number | string | null;
-    bathrooms?: number | string | null;
-    floor_area?: number | string | null;
-    lot_size?: number | string | null;
-    address?: string | null;
-    city?: string;
-    barangay?: string | null;
-    status?: PropertyStatus;
-  };
+
+  // Defence-in-depth ownership check independent of RLS
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "No agent profile found" }, { status: 403 });
+  }
+
+  const { data: listing } = await supabase
+    .from("properties")
+    .select("agent_id")
+    .eq("id", id)
+    .single();
+
+  if (!listing) {
+    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+  }
+
+  if (listing.agent_id !== agent.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await request.json() as UpdateListingRequest;
+
+  // AC7 — Server-side validation mirroring client rules (only validate fields present in body)
+  if (body.title !== undefined) {
+    const title = body.title.trim();
+    if (title.length < 5 || title.length > 200) {
+      return NextResponse.json({ error: "Title must be between 5 and 200 characters." }, { status: 400 });
+    }
+  }
+  if (body.price !== undefined) {
+    const price = Number(String(body.price).replace(/[₱,\s]/g, ""));
+    if (isNaN(price) || price < 1000) {
+      return NextResponse.json({ error: "Price must be at least ₱1,000." }, { status: 400 });
+    }
+  }
+  if (body.floor_area !== undefined && body.floor_area !== null && body.floor_area !== "") {
+    const fa = Number(body.floor_area);
+    if (isNaN(fa) || fa <= 0) {
+      return NextResponse.json({ error: "Floor area must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.lot_size !== undefined && body.lot_size !== null && body.lot_size !== "") {
+    const ls = Number(body.lot_size);
+    if (isNaN(ls) || ls <= 0) {
+      return NextResponse.json({ error: "Lot size must be a positive number." }, { status: 400 });
+    }
+  }
+  if (body.bedrooms !== undefined && body.bedrooms !== null && body.bedrooms !== "") {
+    const bd = Number(body.bedrooms);
+    if (!Number.isInteger(bd) || bd < 0 || bd > 50) {
+      return NextResponse.json({ error: "Bedrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
+  if (body.bathrooms !== undefined && body.bathrooms !== null && body.bathrooms !== "") {
+    const ba = Number(body.bathrooms);
+    if (!Number.isInteger(ba) || ba < 0 || ba > 50) {
+      return NextResponse.json({ error: "Bathrooms must be between 0 and 50." }, { status: 400 });
+    }
+  }
 
   // Build update payload — only include fields present in the request body
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<"properties"> = {};
   if (body.title !== undefined) update.title = body.title.trim();
   if (body.description !== undefined) update.description = body.description?.trim() ?? null;
-  if (body.price !== undefined) update.price = Number(body.price);
+  if (body.price !== undefined) update.price = Number(String(body.price).replace(/[₱,\s]/g, ""));
   if (body.price_type !== undefined) {
     update.price_type = body.price_type;
     update.price_period = body.price_type === "rent" ? "monthly" : "total";
@@ -82,6 +133,31 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
+
+  // Defence-in-depth ownership check independent of RLS
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!agent) {
+    return NextResponse.json({ error: "No agent profile found" }, { status: 403 });
+  }
+
+  const { data: listing } = await supabase
+    .from("properties")
+    .select("agent_id")
+    .eq("id", id)
+    .single();
+
+  if (!listing) {
+    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+  }
+
+  if (listing.agent_id !== agent.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { error } = await supabase.from("properties").delete().eq("id", id);
 

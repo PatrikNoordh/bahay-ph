@@ -1,21 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { Listing } from "@/lib/types";
+import { useSavedProperty } from "@/hooks/useSavedProperties";
+import { buildWhatsAppUrl, buildPhoneUrl } from "@/lib/utils";
+import { PropertyCard } from "@/components/PropertyCard";
 
-// TODO: connect to Supabase saved_properties for heart toggle (Phase 2 — AC17)
-// TODO: replace gradient placeholder with next/image from Supabase Storage (Phase 2 — AC14)
-// TODO: WhatsApp CTA — wa.me/63XXXXXXXXXX link (Phase 2 — AC15)
-// TODO: Call agent — tel: link (Phase 2 — AC16)
+// AC11 — Mini map is client-only (Leaflet accesses window)
+const DynamicMiniMap = dynamic(
+  () => import("@/components/LeafletMiniMap").then((m) => ({ default: m.LeafletMiniMap })),
+  {
+    ssr: false,
+    loading: () => <div className="absolute inset-0 bg-lime-100 animate-pulse rounded-[14px]" />,
+  }
+);
+
+// Sand-colored 1×1 SVG blur placeholder matching the Bahay.ph design system
+const SAND_BLUR =
+  "data:image/svg+xml;base64,PHN2Zz48cmVjdCBmaWxsPSIjRjhGM0VDIiBpZHRoaD0iMSIgaGVpZ2h0PSIxIi8+PC9zdmc+";
 
 interface PropertyDetailPageProps {
   listing: Listing | null;
+  relatedListings?: Listing[];
 }
 
-export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
+export function PropertyDetailPage({ listing, relatedListings = [] }: PropertyDetailPageProps) {
   const router = useRouter();
-  const [saved, setSaved] = useState(false);
+  // AC6 — listing.id is stable; hook reads from SavedPropertiesProvider context
+  const { isSaved, toggle } = useSavedProperty(listing?.id ?? "");
+  // BH-39 — track avatar load failure for 404 fallback
+  const [avatarError, setAvatarError] = useState(false);
+  // AC1–AC4 — Carousel state
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // AC1/AC2 — track scroll position to derive active dot index
+  const handleCarouselScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollLeft / el.offsetWidth);
+    setActiveIndex(index);
+  }, []);
+
+  // AC3 — open lightbox at current index
+  const openLightbox = useCallback((index: number) => {
+    setActiveIndex(index);
+    setLightboxOpen(true);
+  }, []);
 
   // ── 404 fallback — unknown ID (edge case) ──────────────────
   if (!listing) {
@@ -41,6 +76,17 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
 
   const isLotOnly = listing.beds === null && listing.baths === null;
 
+  // AC1–AC4 — WhatsApp deep link; null when agent has no phone on record
+  const whatsAppUrl =
+    listing.agent?.phone
+      ? buildWhatsAppUrl(listing.agent.phone, listing.name)
+      : null;
+
+  // BH-25 — tel: deep link for native dialler; null hides the Call button entirely
+  const phoneUrl = listing.agent?.phone
+    ? buildPhoneUrl(listing.agent.phone)
+    : null;
+
   // Specs for the specs row (AC5) — up to 4, lot-only hides beds/baths
   const specs = [
     ...(isLotOnly
@@ -65,37 +111,179 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
     <>
       {/* ── Scrollable content (flex-1 so CTA bar sits below) ── */}
       <div className="flex-1 overflow-y-auto">
-        {/* AC1 — Hero image: 280px tall gradient placeholder */}
-        <div className={`relative h-[280px] w-full ${listing.img}`}>
-          {/* AC1 — gradient overlay on bottom half */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30" />
+        {/* AC1–AC5 — Image carousel */}
+        {(() => {
+          const images = listing.images.length > 0
+            ? listing.images
+            : listing.image_url
+            ? [listing.image_url]
+            : [];
+          const hasMultiple = images.length > 1;
 
-          {/* AC2 — Overlay topbar: back + heart */}
-          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-            <button
-              type="button"
-              aria-label="Go back"
-              onClick={() => router.back()}
-              className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
-            >
-              <span className="text-narra text-base leading-none">←</span>
-            </button>
+          return (
+            <div className="relative h-[280px] w-full">
+              {images.length > 0 ? (
+                <>
+                  {/* AC4 — CSS scroll snap carousel, swipeable on mobile */}
+                  <div
+                    ref={scrollRef}
+                    onScroll={handleCarouselScroll}
+                    className="flex h-full overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                  >
+                    {images.map((url, i) => (
+                      <button
+                        key={url}
+                        type="button"
+                        aria-label={`View photo ${i + 1} of ${images.length}`}
+                        onClick={() => openLightbox(i)}
+                        className="relative flex-shrink-0 w-full h-full snap-center snap-always focus:outline-none"
+                      >
+                        <Image
+                          src={url}
+                          alt={`${listing.name} — photo ${i + 1}`}
+                          fill
+                          sizes="100vw"
+                          className="object-cover"
+                          placeholder="blur"
+                          blurDataURL={SAND_BLUR}
+                          priority={i === 0}
+                        />
+                      </button>
+                    ))}
+                  </div>
 
-            <button
-              type="button"
-              aria-label={saved ? "Remove from saved" : "Save property"}
-              onClick={() => {
-                setSaved((s) => !s);
-                // TODO: connect to Supabase saved_properties insert/delete (Phase 2 — AC17)
-              }}
-              className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
-            >
-              <span aria-hidden="true" className="text-base leading-none">
-                {saved ? "❤️" : "🤍"}
+                  {/* AC1 — gradient overlay on bottom half */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30" />
+
+                  {/* AC2 — dot indicators (only when multiple images) */}
+                  {hasMultiple && (
+                    <div className="pointer-events-none absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+                      {images.map((_, i) => (
+                        <span
+                          key={i}
+                          className={`block rounded-full transition-all duration-200 ${
+                            i === activeIndex
+                              ? "w-4 h-1.5 bg-white"
+                              : "w-1.5 h-1.5 bg-white/60"
+                          }`}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* AC5 — gradient placeholder when no images */
+                <div className={`absolute inset-0 ${listing.img}`} />
+              )}
+
+              {/* AC2 — Overlay topbar: back + heart */}
+              <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  aria-label="Go back"
+                  onClick={() => router.back()}
+                  className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
+                >
+                  <span className="text-narra text-base leading-none">←</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-label={isSaved ? "Remove from saved" : "Save property"}
+                  onClick={() => void toggle()}
+                  className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-[0.92] transition-transform duration-100 shadow-[var(--shadow-card)]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {isSaved ? "❤️" : "🤍"}
+                  </span>
+                </button>
+              </div>
+
+              {/* AC2 — photo count badge (top-right, when multiple) */}
+              {hasMultiple && (
+                <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[11px] font-medium rounded-full px-2.5 py-1 backdrop-blur-sm">
+                  {activeIndex + 1} / {images.length}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* AC3 — Fullscreen lightbox */}
+        {lightboxOpen && listing.images.length > 0 && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Photo gallery"
+            className="fixed inset-0 z-[100] bg-black flex flex-col"
+          >
+            {/* Lightbox header */}
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+              <span className="text-white/70 text-sm">
+                {activeIndex + 1} / {listing.images.length}
               </span>
-            </button>
+              <button
+                type="button"
+                aria-label="Close gallery"
+                onClick={() => setLightboxOpen(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-colors"
+              >
+                <span className="text-white text-lg leading-none">✕</span>
+              </button>
+            </div>
+
+            {/* Lightbox carousel — same scroll snap pattern */}
+            <div
+              className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                setActiveIndex(Math.round(el.scrollLeft / el.offsetWidth));
+              }}
+              ref={(el) => {
+                // Scroll lightbox to active index on open
+                if (el && el.scrollLeft === 0 && activeIndex > 0) {
+                  el.scrollLeft = activeIndex * el.offsetWidth;
+                }
+              }}
+            >
+              {listing.images.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative flex-shrink-0 w-full snap-center snap-always flex items-center justify-center"
+                >
+                  <Image
+                    src={url}
+                    alt={`${listing.name} — photo ${i + 1}`}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                    priority={i === activeIndex}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Lightbox dot indicators */}
+            {listing.images.length > 1 && (
+              <div className="flex justify-center gap-1.5 py-4 flex-shrink-0">
+                {listing.images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`block rounded-full transition-all duration-200 ${
+                      i === activeIndex
+                        ? "w-4 h-1.5 bg-white"
+                        : "w-1.5 h-1.5 bg-white/40"
+                    }`}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* ── Content body ─────────────────────────────────── */}
         <div className="px-4 pt-4 pb-6">
@@ -180,10 +368,23 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
             {listing.agent ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
-                  {/* AC8 — Initials avatar */}
-                  <div className="w-[52px] h-[52px] rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-lg flex-shrink-0">
-                    {listing.agent.initials}
-                  </div>
+                  {/* BH-39 — Show avatar_url if set and loaded OK, else initials fallback */}
+                  {listing.agent.avatar_url && !avatarError ? (
+                    <div className="w-[48px] h-[48px] rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={listing.agent.avatar_url}
+                        alt={listing.agent.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-full h-full rounded-full"
+                        onError={() => setAvatarError(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-[48px] h-[48px] rounded-full bg-primary text-white flex items-center justify-center font-display font-bold text-lg flex-shrink-0">
+                      {listing.agent.initials}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="font-semibold text-sm text-narra leading-tight">
                       {listing.agent.name}
@@ -196,26 +397,36 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
                     </p>
                   </div>
                 </div>
-                {/* AC8 — Call + Chat buttons */}
+                {/* Call + Chat buttons — AC3: Call hidden when no phone */}
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-sand-dark rounded-[12px] py-2.5 text-sm font-medium text-narra active:scale-[0.97] transition-transform duration-100"
-                    onClick={() => {
-                      // TODO: open tel: link — agent.phone (Phase 2 — AC16)
-                    }}
-                  >
-                    <span aria-hidden="true">📞</span> Call
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-green text-white rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
-                    onClick={() => {
-                      // TODO: open WhatsApp wa.me/63... link (Phase 2 — AC15)
-                    }}
-                  >
-                    <span aria-hidden="true">💬</span> Chat
-                  </button>
+                  {phoneUrl && (
+                    <a
+                      href={phoneUrl}
+                      className="flex-1 flex items-center justify-center gap-1.5 border border-sand-dark rounded-[12px] py-2.5 text-sm font-medium text-narra active:scale-[0.97] transition-transform duration-100"
+                    >
+                      <span aria-hidden="true">📞</span> Call
+                    </a>
+                  )}
+                  {/* AC1–AC3 — WhatsApp deep link; AC4 — disabled when no phone */}
+                  {whatsAppUrl ? (
+                    <a
+                      href={whatsAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-green text-narra rounded-[12px] py-2.5 text-sm font-medium active:scale-[0.97] transition-transform duration-100"
+                    >
+                      <span aria-hidden="true">💬</span> Chat
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Contact info unavailable"
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-sand-dark text-muted rounded-[12px] py-2.5 text-sm font-medium cursor-not-allowed opacity-60"
+                    >
+                      <span aria-hidden="true">💬</span> Chat
+                    </button>
+                  )}
                 </div>
               </>
             ) : (
@@ -228,24 +439,46 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
             )}
           </div>
 
-          {/* AC9 — Map placeholder with pulsing ripple animation */}
-          {/* TODO: replace with embedded Leaflet map centred on listing lat/lng (Phase 2) */}
+          {/* AC11 — Leaflet mini-map centred on listing coords; ripple fallback when no coords */}
           <div className="mb-4">
             <h2 className="font-display font-semibold text-sm text-narra mb-2">
               Location
             </h2>
-            <div className="relative h-[160px] rounded-[14px] bg-lime-100 overflow-hidden flex items-center justify-center">
-              {/* Ripple rings — animate-ping must not cause layout reflow */}
-              <span className="absolute inline-flex h-16 w-16 rounded-full bg-primary/20 animate-ping" />
-              <span className="absolute inline-flex h-10 w-10 rounded-full bg-primary/30 animate-ping [animation-delay:150ms]" />
-              {/* Centre dot */}
-              <span className="relative inline-flex h-4 w-4 rounded-full bg-primary shadow-[var(--shadow-card)]" />
-              {/* Location label */}
-              <span className="absolute bottom-3 left-0 right-0 text-center text-[11px] text-muted font-medium">
-                {listing.location}
-              </span>
+            <div className="relative h-[160px] rounded-[14px] overflow-hidden">
+              {listing.lat !== null && listing.lng !== null ? (
+                <DynamicMiniMap
+                  lat={listing.lat}
+                  lng={listing.lng}
+                  title={listing.name}
+                />
+              ) : (
+                // Fallback when lat/lng are not yet available
+                <div className="absolute inset-0 bg-lime-100 flex items-center justify-center">
+                  <span className="absolute inline-flex h-16 w-16 rounded-full bg-primary/20 animate-ping" />
+                  <span className="absolute inline-flex h-10 w-10 rounded-full bg-primary/30 animate-ping [animation-delay:150ms]" />
+                  <span className="relative inline-flex h-4 w-4 rounded-full bg-primary shadow-[var(--shadow-card)]" />
+                  <span className="absolute bottom-3 left-0 right-0 text-center text-[11px] text-muted font-medium">
+                    {listing.location}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* AC1/AC5 — "More in {city}" related properties section */}
+          {relatedListings.length > 0 && (
+            <div className="mb-4">
+              <h2 className="font-display font-semibold text-sm text-narra mb-3">
+                More in {listing.location.split(", ").at(-1)}
+              </h2>
+              {/* AC3 — 2-column grid using PropertyCard grid variant */}
+              <div className="grid grid-cols-2 gap-3">
+                {relatedListings.map((related) => (
+                  <PropertyCard key={related.id} listing={related} variant="grid" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -261,16 +494,26 @@ export function PropertyDetailPage({ listing }: PropertyDetailPageProps) {
               {listing.price}
             </p>
           </div>
-          {/* Right: Contact agent CTA */}
-          <button
-            type="button"
-            className="flex-shrink-0 bg-primary text-white font-medium text-sm rounded-xl px-5 py-3 active:scale-[0.97] transition-transform duration-100"
-            onClick={() => {
-              // TODO: open WhatsApp wa.me/63... link (Phase 2 — AC15)
-            }}
-          >
-            Contact agent
-          </button>
+          {/* AC5 — sticky CTA: WhatsApp deep link or disabled */}
+          {whatsAppUrl ? (
+            <a
+              href={whatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 bg-primary text-white font-medium text-sm rounded-xl px-5 py-3 active:scale-[0.97] transition-transform duration-100"
+            >
+              Contact agent
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Contact info unavailable"
+              className="flex-shrink-0 bg-sand-dark text-muted font-medium text-sm rounded-xl px-5 py-3 cursor-not-allowed opacity-60"
+            >
+              Contact agent
+            </button>
+          )}
         </div>
       </div>
     </>

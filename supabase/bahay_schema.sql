@@ -424,3 +424,19 @@ INSERT INTO properties (
 -- 2. Update the seed agent record with real contact details
 -- 3. Link real agent accounts via agents.user_id after signup
 -- ============================================================
+
+
+-- ============================================================
+-- BH-48 — Broker onboarding: new column + INSERT RLS policy
+-- Apply these two statements manually in the Supabase SQL Editor.
+-- ============================================================
+
+-- 1. Add PRC licence number column for broker verification.
+ALTER TABLE agents
+  ADD COLUMN IF NOT EXISTS prc_license_number TEXT;
+
+-- 2. Allow an authenticated user to create their own agent profile.
+--    Prevents creating a profile for another user_id.
+CREATE POLICY "Agents can insert own profile"
+  ON agents FOR INSERT
+  WITH CHECK (user_id = auth.uid());

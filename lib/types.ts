@@ -1,7 +1,13 @@
 // ============================================================
 // Bahay.ph — Database Types
 // Matches the Supabase schema in supabase/bahay_schema.sql
+//
+// Generated Supabase types live in lib/database.types.ts.
+// Run `npm run gen:types` after any schema change to regenerate.
+// The types below extend / narrow the generated types with stricter unions.
 // ============================================================
+
+export type { Database } from "@/lib/database.types";
 
 export type SubscriptionTier = "starter" | "pro" | "agency";
 export type PriceType = "sale" | "rent";
@@ -18,6 +24,7 @@ export interface Agent {
   email: string | null;
   company_name: string | null;
   years_experience: number | null;
+  prc_license_number: string | null;
   avatar_url: string | null;
   is_verified: boolean;
   subscription_tier: SubscriptionTier;
@@ -90,7 +97,7 @@ export interface PropertyDetail extends Property {
 }
 
 // ============================================================
-// UI display type — used by mock data and future useListings hook
+// UI display types
 // ============================================================
 
 export interface ListingAgent {
@@ -98,6 +105,8 @@ export interface ListingAgent {
   initials: string;
   company: string;
   experience: number;
+  phone: string | null;
+  avatar_url: string | null;
 }
 
 export interface Listing {
@@ -113,10 +122,16 @@ export interface Listing {
   area: number | null;   // floor_area in m²
   lot: number | null;    // lot_size in m²
   location: string;      // "Barangay, City"
-  img: string;           // Tailwind gradient class for placeholder image
+  img: string;           // Tailwind gradient class — fallback when image_url is null
+  // TODO: connect to Supabase — populated from property_images (is_primary = true)
+  image_url: string | null;
+  // TODO: connect to Supabase — all property_images sorted by sort_order
+  images: string[];      // full ordered list of image URLs for carousel (empty = show placeholder)
   agent: ListingAgent;
   description: string;
   features: string[];
   mapPos: { top: string; left: string }; // CSS % position on illustrative map
+  lat: number | null;   // WGS-84 latitude for Leaflet map
+  lng: number | null;   // WGS-84 longitude for Leaflet map
   tags: string[];
 }

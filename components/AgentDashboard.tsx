@@ -1,13 +1,34 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { Property, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
+import { ImageUploader } from "@/components/ImageUploader";
+import { useToast } from "@/components/ui/Toast";
+import type { Property, PropertyImage, PropertyStatus, PriceType, PropertyType } from "@/lib/types";
+import type { CreateListingRequest, UpdateListingRequest } from "@/lib/api.types";
+
+// BH-30 — Leaflet picker is client-only (accesses window)
+const DynamicLocationPicker = dynamic(
+  () => import("@/components/LocationPickerMap").then((m) => ({ default: m.LocationPickerMap })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] rounded-[14px] bg-sand-dark animate-pulse" />
+    ),
+  }
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface AgentDashboardProps {
   agentId: string;
+  /** AC5/AC6 — false until admin sets is_verified = true in Supabase */
+  isVerified: boolean;
   initialListings: Property[];
+  /** Primary image URL keyed by property_id — for thumbnail display */
+  initialPrimaryImages: Record<string, string>;
 }
 
 interface FormValues {
@@ -23,6 +44,19 @@ interface FormValues {
   address: string;
   city: string;
   barangay: string;
+  latitude: string;
+  longitude: string;
+}
+
+// AC1–AC4 field-level validation errors
+interface FormErrors {
+  title?: string;
+  price?: string;
+  city?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+  floor_area?: string;
+  lot_size?: string;
 }
 
 const EMPTY_FORM: FormValues = {
@@ -38,6 +72,8 @@ const EMPTY_FORM: FormValues = {
   address: "",
   city: "",
   barangay: "",
+  latitude: "",
+  longitude: "",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,7 +96,7 @@ function listingFromForm(form: FormValues, agentId: string): Omit<Property, "id"
   return {
     title: form.title.trim(),
     description: form.description.trim() || null,
-    price: Number(form.price),
+    price: Number(stripPriceFormatting(form.price)),
     price_type: form.price_type,
     price_period: form.price_type === "rent" ? "monthly" : "total",
     property_type: form.property_type,
@@ -71,8 +107,8 @@ function listingFromForm(form: FormValues, agentId: string): Omit<Property, "id"
     address: form.address.trim() || null,
     city: form.city.trim(),
     barangay: form.barangay.trim() || null,
-    latitude: null,
-    longitude: null,
+    latitude: form.latitude ? Number(form.latitude) : null,
+    longitude: form.longitude ? Number(form.longitude) : null,
     status: "active",
     is_featured: false,
     agent_id: agentId,
@@ -93,19 +129,112 @@ function formFromListing(l: Property): FormValues {
     address: l.address ?? "",
     city: l.city,
     barangay: l.barangay ?? "",
+    latitude: l.latitude !== null ? String(l.latitude) : "",
+    longitude: l.longitude !== null ? String(l.longitude) : "",
   };
+}
+
+// ── Validation ───────────────────────────────────────────────────────────────
+
+/** Strip currency formatting so "₱1,200,000" → "1200000" */
+function stripPriceFormatting(value: string): string {
+  return value.replace(/[₱,\s]/g, "");
+}
+
+/** AC1–AC4: Returns field-level errors. Empty object = valid. */
+function validateForm(form: FormValues): FormErrors {
+  const errors: FormErrors = {};
+
+  // AC1 — Title: 5–200 characters
+  const title = form.title.trim();
+  if (title.length > 0 && title.length < 5) {
+    errors.title = "Title must be at least 5 characters.";
+  } else if (title.length > 200) {
+    errors.title = "Title must be 200 characters or fewer.";
+  }
+
+  // AC2 — Price: numeric only, minimum ₱1,000
+  if (form.price !== "") {
+    const rawPrice = stripPriceFormatting(form.price);
+    const price = Number(rawPrice);
+    if (isNaN(price) || rawPrice === "") {
+      errors.price = "Price must be a number.";
+    } else if (price < 1000) {
+      errors.price = "Price must be at least ₱1,000.";
+    }
+  }
+
+  // AC3 — Floor area: positive number only
+  if (form.floor_area !== "") {
+    const fa = Number(form.floor_area);
+    if (isNaN(fa) || fa <= 0) {
+      errors.floor_area = "Floor area must be a positive number.";
+    }
+  }
+
+  // AC3 — Lot size: positive number only
+  if (form.lot_size !== "") {
+    const ls = Number(form.lot_size);
+    if (isNaN(ls) || ls <= 0) {
+      errors.lot_size = "Lot size must be a positive number.";
+    }
+  }
+
+  // AC4 — Bedrooms: 0–50
+  if (form.bedrooms !== "") {
+    const bd = Number(form.bedrooms);
+    if (!Number.isInteger(bd) || bd < 0 || bd > 50) {
+      errors.bedrooms = "Bedrooms must be between 0 and 50.";
+    }
+  }
+
+  // AC4 — Bathrooms: 0–50
+  if (form.bathrooms !== "") {
+    const ba = Number(form.bathrooms);
+    if (!Number.isInteger(ba) || ba < 0 || ba > 50) {
+      errors.bathrooms = "Bathrooms must be between 0 and 50.";
+    }
+  }
+
+  return errors;
+}
+
+/** Returns true if the form is ready to submit (required fields filled, no validation errors) */
+function isFormValid(form: FormValues, errors: FormErrors): boolean {
+  const hasErrors = Object.keys(errors).length > 0;
+  const title = form.title.trim();
+  const rawPrice = stripPriceFormatting(form.price);
+  const hasRequiredFields = title.length >= 5 && rawPrice !== "" && Number(rawPrice) >= 1000 && form.city.trim().length > 0;
+  return hasRequiredFields && !hasErrors;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps) {
+export function AgentDashboard({ agentId, isVerified, initialListings, initialPrimaryImages }: AgentDashboardProps) {
   const [listings, setListings] = useState<Property[]>(initialListings);
+  const [primaryImages, setPrimaryImages] = useState<Record<string, string>>(initialPrimaryImages);
   const [showForm, setShowForm] = useState(false);
   const [editingListing, setEditingListing] = useState<Property | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormValues>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  // AC5 — per-row loading state for status change and delete
+  const [statusChangingId, setStatusChangingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { showToast } = useToast();
+
+  // ── Image state ───────────────────────────────────────────────────────────
+  /** Existing images from DB (edit mode) */
+  const [existingImages, setExistingImages] = useState<PropertyImage[]>([]);
+  /** Images marked for deletion (their IDs) */
+  const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
+  /** New local files chosen but not yet uploaded */
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  /** AC8 — upload progress shown after form closes */
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   // ── Form open/close ───────────────────────────────────────────────────────
 
@@ -113,33 +242,216 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
     setForm(EMPTY_FORM);
     setEditingListing(null);
     setFormError(null);
+    setFieldErrors({});
+    setExistingImages([]);
+    setRemovedImageIds([]);
+    setPendingFiles([]);
     setShowForm(true);
   }
 
-  function openEdit(listing: Property) {
-    setForm(formFromListing(listing));
+  async function openEdit(listing: Property) {
+    const editForm = formFromListing(listing);
+    setForm(editForm);
     setEditingListing(listing);
     setFormError(null);
+    setFieldErrors(validateForm(editForm));
+    setRemovedImageIds([]);
+    setPendingFiles([]);
     setShowForm(true);
+
+    // Fetch existing images for this listing
+    setIsLoadingImages(true);
+    try {
+      const res = await fetch(`/api/images?property_id=${listing.id}`);
+      if (res.ok) {
+        const images = (await res.json()) as PropertyImage[];
+        setExistingImages(images);
+      } else {
+        setExistingImages([]);
+      }
+    } catch {
+      setExistingImages([]);
+    } finally {
+      setIsLoadingImages(false);
+    }
   }
 
   function closeForm() {
     setShowForm(false);
     setEditingListing(null);
     setFormError(null);
+    setExistingImages([]);
+    setRemovedImageIds([]);
+    setPendingFiles([]);
   }
 
   // ── Field helper ─────────────────────────────────────────────────────────
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const updated = { ...form, [key]: value };
+    setForm(updated);
+    // AC5/AC6 — live validation on every keystroke
+    setFieldErrors(validateForm(updated));
   }
+
+  // ── Image helpers ─────────────────────────────────────────────────────────
+
+  function handleAddFiles(files: File[]) {
+    setPendingFiles((prev) => [...prev, ...files]);
+  }
+
+  function handleRemoveExisting(imageId: string) {
+    setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+    setRemovedImageIds((prev) => [...prev, imageId]);
+  }
+
+  function handleRemovePending(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /** AC5 — move an existing image up or down within the local array */
+  function handleReorderExisting(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    setExistingImages((prev) => {
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  /** AC5 — move a pending file up or down within the local array */
+  function handleReorderPending(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    setPendingFiles((prev) => {
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  /**
+   * AC5 — PATCH sort_order for any existing images whose position in the local
+   * array no longer matches the sort_order stored in the DB.
+   */
+  const patchReorderedImages = useCallback(async () => {
+    const patches = existingImages
+      .map((img, i) => ({ img, newOrder: i }))
+      .filter(({ img, newOrder }) => img.sort_order !== newOrder);
+
+    await Promise.all(
+      patches.map(({ img, newOrder }) =>
+        fetch(`/api/images/${img.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: newOrder }),
+        }).catch(() => {
+          console.warn("[ImageUpload] Failed to patch sort_order for", img.id);
+        })
+      )
+    );
+  }, [existingImages]);
+
+  /**
+   * Upload pending files to Supabase Storage and save records to DB.
+   * AC8 — updates uploadProgress as each file completes.
+   * Returns the public URL of the first uploaded image (for thumbnail update).
+   */
+  const uploadPendingFiles = useCallback(
+    async (propertyId: string, currentImageCount: number): Promise<string | null> => {
+      if (pendingFiles.length === 0) return null;
+
+      const supabase = createBrowserSupabaseClient();
+      let firstUrl: string | null = null;
+
+      // AC8 — initialise progress
+      setUploadProgress({ done: 0, total: pendingFiles.length });
+
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${propertyId}/${crypto.randomUUID()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("property-images")
+          .upload(path, file, { contentType: file.type });
+
+        if (uploadError) {
+          console.warn("[ImageUpload] Storage upload failed:", uploadError.message);
+          setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
+          continue;
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("property-images").getPublicUrl(path);
+
+        const isPrimary = currentImageCount === 0 && i === 0;
+
+        const res = await fetch("/api/images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            property_id: propertyId,
+            image_url: publicUrl,
+            is_primary: isPrimary,
+            sort_order: currentImageCount + i,
+          }),
+        });
+
+        if (res.ok && isPrimary) {
+          firstUrl = publicUrl;
+        }
+
+        // AC8 — advance progress after each file
+        setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
+      }
+
+      // AC8 — clear progress when done
+      setUploadProgress(null);
+      return firstUrl;
+    },
+    [pendingFiles]
+  );
+
+  /**
+   * Delete images marked for removal from DB (and Storage via the API).
+   */
+  const deleteRemovedImages = useCallback(async () => {
+    await Promise.all(
+      removedImageIds.map((id) =>
+        fetch(`/api/images/${id}`, { method: "DELETE" }).catch(() => {
+          // Best-effort — log but don't block the save
+          console.warn("[ImageUpload] Failed to delete image", id);
+        })
+      )
+    );
+  }, [removedImageIds]);
 
   // ── Save (add or edit) ────────────────────────────────────────────────────
 
   const handleSave = useCallback(async () => {
-    if (!form.title.trim() || !form.price || !form.city.trim()) {
-      setFormError("Title, price and city are required.");
+    // AC6 — guard against submitting invalid form
+    const errors = validateForm(form);
+    setFieldErrors(errors);
+    if (!isFormValid(form, errors)) {
+      setFormError("Please fix the errors below before saving.");
+      return;
+    }
+
+    const lat = form.latitude ? Number(form.latitude) : null;
+    const lng = form.longitude ? Number(form.longitude) : null;
+    if ((lat !== null) !== (lng !== null)) {
+      setFormError("Both latitude and longitude must be set together.");
+      return;
+    }
+    if (lat !== null && (lat < -90 || lat > 90)) {
+      setFormError("Latitude must be between -90 and 90.");
+      return;
+    }
+    if (lng !== null && (lng < -180 || lng > 180)) {
+      setFormError("Longitude must be between -180 and 180.");
       return;
     }
 
@@ -159,19 +471,51 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
       const res = await fetch(`/api/listings/${editingListing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload as UpdateListingRequest),
       });
 
       if (!res.ok) {
         setListings(previous); // revert
-        const { error } = await res.json() as { error: string };
+        const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to save. Please try again.");
-        openEdit(editingListing);
+        showToast(error ?? "Failed to save listing.", "error");
+        void openEdit(editingListing);
       } else {
-        const updated = await res.json() as Property;
+        const updated = (await res.json()) as Property;
+        showToast("Listing updated successfully.", "success");
         setListings((prev) =>
           prev.map((l) => (l.id === updated.id ? updated : l))
         );
+
+        // Handle image changes in parallel — AC5 reorder, AC6 delete, AC2 upload
+        const remainingCount = existingImages.length; // after UI removals
+        await Promise.all([
+          patchReorderedImages(),
+          deleteRemovedImages(),
+          uploadPendingFiles(editingListing.id, remainingCount).then((newPrimaryUrl) => {
+            if (newPrimaryUrl) {
+              setPrimaryImages((prev) => ({ ...prev, [editingListing.id]: newPrimaryUrl }));
+            }
+            // If we removed the primary image, update thumbnail with new first existing image
+            const hadPrimary = primaryImages[editingListing.id];
+            if (hadPrimary && removedImageIds.some((id) =>
+              existingImages.find((img) => img.id === id && img.is_primary)
+            )) {
+              const nextPrimary = existingImages.find(
+                (img) => !removedImageIds.includes(img.id)
+              );
+              if (nextPrimary) {
+                setPrimaryImages((prev) => ({ ...prev, [editingListing.id]: nextPrimary.image_url }));
+              } else if (!newPrimaryUrl) {
+                setPrimaryImages((prev) => {
+                  const next = { ...prev };
+                  delete next[editingListing.id];
+                  return next;
+                });
+              }
+            }
+          }),
+        ]);
       }
     } else {
       // Optimistic add with temp id
@@ -183,55 +527,116 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
       const res = await fetch("/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload as CreateListingRequest),
       });
 
       if (!res.ok) {
         setListings((prev) => prev.filter((l) => l.id !== tempId)); // revert
-        const { error } = await res.json() as { error: string };
+        const { error } = (await res.json()) as { error: string };
         setFormError(error ?? "Failed to create listing.");
+        showToast(error ?? "Failed to create listing.", "error");
         openAdd();
       } else {
-        const created = await res.json() as Property;
+        const created = (await res.json()) as Property;
+        showToast("Listing created successfully.", "success");
         setListings((prev) => prev.map((l) => (l.id === tempId ? created : l)));
+
+        // Upload images now that we have a real property_id
+        const primaryUrl = await uploadPendingFiles(created.id, 0);
+        if (primaryUrl) {
+          setPrimaryImages((prev) => ({ ...prev, [created.id]: primaryUrl }));
+        }
       }
     }
 
     setIsSaving(false);
-  }, [form, agentId, editingListing, listings]);
+  }, [form, agentId, editingListing, listings, existingImages, removedImageIds, deleteRemovedImages, patchReorderedImages, uploadPendingFiles, primaryImages, showToast]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
 
-  const handleDelete = useCallback(async (id: string) => {
-    const previous = listings;
-    setListings((prev) => prev.filter((l) => l.id !== id)); // optimistic
-    setConfirmDeleteId(null);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const previous = listings;
+      setDeletingId(id);
+      setListings((prev) => prev.filter((l) => l.id !== id)); // optimistic
+      setConfirmDeleteId(null);
 
-    const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      setListings(previous); // revert
-    }
-  }, [listings]);
+      const res = await fetch(`/api/listings/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        setListings(previous); // revert
+        showToast("Failed to delete listing.", "error");
+      } else {
+        showToast("Listing deleted.", "success");
+        // Remove thumbnail entry
+        setPrimaryImages((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+      setDeletingId(null);
+    },
+    [listings, showToast]
+  );
 
   // ── Status change ─────────────────────────────────────────────────────────
 
-  const handleStatusChange = useCallback(async (id: string, status: PropertyStatus) => {
-    const previous = listings;
-    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
+  const handleStatusChange = useCallback(
+    async (id: string, status: PropertyStatus) => {
+      const previous = listings;
+      setStatusChangingId(id);
+      setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l))); // optimistic
 
-    const res = await fetch(`/api/listings/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+      const res = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status } satisfies UpdateListingRequest),
+      });
 
-    if (!res.ok) setListings(previous); // revert
-  }, [listings]);
+      if (!res.ok) {
+        setListings(previous); // revert
+        showToast("Failed to update status.", "error");
+      }
+      setStatusChangingId(null);
+    },
+    [listings, showToast]
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex-1 overflow-y-auto pb-4">
+      {/* AC8 — Upload progress banner (shown after form closes while upload runs) */}
+      {uploadProgress && (
+        <div className="mx-4 mt-4 bg-ocean/10 border border-ocean/20 rounded-[14px] px-4 py-3 flex items-center gap-3">
+          <span className="w-4 h-4 border-2 border-ocean border-t-transparent rounded-full animate-spin flex-shrink-0" aria-hidden="true" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ocean">
+              Uploading photos… {uploadProgress.done}/{uploadProgress.total}
+            </p>
+            <div className="mt-1.5 h-1.5 bg-ocean/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-ocean rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AC5 — Pending verification banner */}
+      {!isVerified && (
+        <div className="mx-4 mt-4 bg-ocean/10 border border-ocean/20 rounded-[14px] px-4 py-3 flex gap-3 items-start">
+          <span className="text-xl leading-none mt-0.5" aria-hidden="true">⏳</span>
+          <div>
+            <p className="text-sm font-semibold text-ocean">Verification pending</p>
+            <p className="text-xs text-muted mt-0.5">
+              Our team is reviewing your PRC licence. You can create listings once verified — usually within 1 business day.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-4">
         <div>
@@ -242,11 +647,12 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
             {listings.length} {listings.length === 1 ? "listing" : "listings"}
           </p>
         </div>
-        {/* AC4 — Add listing button */}
+        {/* AC6 — Add listing blocked until verified */}
         <button
           type="button"
           onClick={openAdd}
-          className="bg-primary text-white text-sm font-medium rounded-[12px] px-4 py-2.5 active:scale-[0.97] transition-transform duration-100"
+          disabled={!isVerified}
+          className="bg-primary text-white text-sm font-medium rounded-[12px] px-4 py-2.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           + Add listing
         </button>
@@ -257,72 +663,101 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
         <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
           <p className="text-4xl mb-3" aria-hidden="true">🏠</p>
           <p className="font-semibold text-narra mb-1">No listings yet</p>
-          <p className="text-sm text-muted mb-4">Add your first listing to get started.</p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="bg-primary text-white text-sm font-medium rounded-[12px] px-5 py-2.5 active:scale-[0.97] transition-transform duration-100"
-          >
-            Add listing
-          </button>
+          <p className="text-sm text-muted mb-4">
+            {isVerified
+              ? "Add your first listing to get started."
+              : "You can add listings once your account is verified."}
+          </p>
+          {isVerified && (
+            <button
+              type="button"
+              onClick={openAdd}
+              className="bg-primary text-white text-sm font-medium rounded-[12px] px-5 py-2.5 active:scale-[0.97] transition-transform duration-100"
+            >
+              Add listing
+            </button>
+          )}
         </div>
       ) : (
         // AC3 — Listing rows
         <div className="px-4 flex flex-col gap-3">
-          {listings.map((listing) => (
-            <div
-              key={listing.id}
-              className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-3 flex gap-3"
-            >
-              {/* Thumbnail placeholder */}
-              <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center">
-                <span className="text-2xl" aria-hidden="true">🏠</span>
-                {/* TODO: show primary property_image thumbnail (BH-18) */}
-              </div>
+          {listings.map((listing) => {
+            const thumbUrl = primaryImages[listing.id] ?? null;
+            return (
+              <div
+                key={listing.id}
+                className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-3 flex gap-3"
+              >
+                {/* AC1 (BH-40) — primary image thumbnail */}
+                <div className="w-16 h-16 rounded-[10px] bg-sand-dark flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                  {thumbUrl ? (
+                    <Image
+                      src={thumbUrl}
+                      alt={listing.title}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl" aria-hidden="true">🏠</span>
+                  )}
+                </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-narra truncate">{listing.title}</p>
-                <p className="text-xs text-primary font-medium mt-0.5">
-                  {formatPrice(listing.price, listing.price_type)}
-                </p>
-                <p className="text-[10px] text-muted mt-0.5">{listing.city}</p>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-narra truncate">{listing.title}</p>
+                  <p className="text-xs text-primary font-medium mt-0.5">
+                    {formatPrice(listing.price, listing.price_type)}
+                  </p>
+                  <p className="text-[10px] text-muted mt-0.5">{listing.city}</p>
 
-                {/* AC8 — Status selector */}
-                <select
-                  value={listing.status}
-                  onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
-                  className={`mt-1.5 text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer ${statusBadgeClass(listing.status)}`}
-                >
-                  {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* AC8 — Status selector; AC5 — spinner while saving */}
+                  <div className="relative mt-1.5 inline-flex items-center">
+                    <select
+                      value={listing.status}
+                      disabled={statusChangingId === listing.id}
+                      onChange={(e) => handleStatusChange(listing.id, e.target.value as PropertyStatus)}
+                      className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 border-0 outline-none cursor-pointer transition-opacity ${statusBadgeClass(listing.status)} ${statusChangingId === listing.id ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {(["active", "sold", "rented", "inactive"] as PropertyStatus[]).map((s) => (
+                        <option key={s} value={s}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    {statusChangingId === listing.id && (
+                      <span className="ml-1 w-2.5 h-2.5 border border-muted border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                    )}
+                  </div>
+                </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openEdit(listing)}
-                  className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
-                  aria-label={`Edit ${listing.title}`}
-                >
-                  ✏️
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(listing.id)}
-                  className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
-                  aria-label={`Delete ${listing.title}`}
-                >
-                  🗑️
-                </button>
+                {/* Actions */}
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(listing)}
+                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100"
+                    aria-label={`Edit ${listing.title}`}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(listing.id)}
+                    disabled={deletingId === listing.id}
+                    className="w-8 h-8 rounded-full bg-sand flex items-center justify-center text-sm active:scale-[0.92] transition-transform duration-100 disabled:opacity-50"
+                    aria-label={`Delete ${listing.title}`}
+                  >
+                    {deletingId === listing.id ? (
+                      <span className="w-3.5 h-3.5 border border-muted border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                    ) : (
+                      "🗑️"
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -334,7 +769,7 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
               Delete listing?
             </p>
             <p className="text-sm text-muted mb-5">
-              This action cannot be undone.
+              This action cannot be undone. All photos will also be removed.
             </p>
             <div className="flex gap-3">
               <button
@@ -346,7 +781,7 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
               </button>
               <button
                 type="button"
-                onClick={() => handleDelete(confirmDeleteId)}
+                onClick={() => void handleDelete(confirmDeleteId)}
                 className="flex-1 bg-primary text-white text-sm font-medium rounded-[12px] py-3 active:scale-[0.97] transition-transform duration-100"
               >
                 Delete
@@ -383,13 +818,31 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                 </div>
               )}
 
-              <Field label="Title *">
+              {/* AC1 — Photo upload (AC2: first photo is primary) */}
+              <Field label="Photos (up to 10)">
+                {isLoadingImages ? (
+                  <div className="w-full h-20 rounded-[12px] bg-sand-dark animate-pulse" />
+                ) : (
+                  <ImageUploader
+                    existingImages={existingImages}
+                    pendingFiles={pendingFiles}
+                    onAddFiles={handleAddFiles}
+                    onRemoveExisting={handleRemoveExisting}
+                    onRemovePending={handleRemovePending}
+                    onReorderExisting={handleReorderExisting}
+                    onReorderPending={handleReorderPending}
+                  />
+                )}
+              </Field>
+
+              {/* AC1 — Title: 5–200 chars */}
+              <Field label="Title *" error={fieldErrors.title}>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setField("title", e.target.value)}
                   placeholder="e.g. 3BR House in Cebu City"
-                  className={inputClass}
+                  className={fieldErrors.title ? inputErrorClass : inputClass}
                 />
               </Field>
 
@@ -403,15 +856,16 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                 />
               </Field>
 
+              {/* AC2 — Price: numeric, min ₱1,000 */}
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Price (₱) *">
+                <Field label="Price (₱) *" error={fieldErrors.price}>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={form.price}
                     onChange={(e) => setField("price", e.target.value)}
                     placeholder="0"
-                    min="0"
-                    className={inputClass}
+                    className={fieldErrors.price ? inputErrorClass : inputClass}
                   />
                 </Field>
 
@@ -441,45 +895,48 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                 </select>
               </Field>
 
+              {/* AC3 — Floor/lot: positive. AC4 — Beds/baths: 0–50 */}
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Bedrooms">
+                <Field label="Bedrooms" error={fieldErrors.bedrooms}>
                   <input
                     type="number"
                     value={form.bedrooms}
                     onChange={(e) => setField("bedrooms", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    max="50"
+                    className={fieldErrors.bedrooms ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Bathrooms">
+                <Field label="Bathrooms" error={fieldErrors.bathrooms}>
                   <input
                     type="number"
                     value={form.bathrooms}
                     onChange={(e) => setField("bathrooms", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    max="50"
+                    className={fieldErrors.bathrooms ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Floor area (m²)">
+                <Field label="Floor area (m²)" error={fieldErrors.floor_area}>
                   <input
                     type="number"
                     value={form.floor_area}
                     onChange={(e) => setField("floor_area", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    className={fieldErrors.floor_area ? inputErrorClass : inputClass}
                   />
                 </Field>
-                <Field label="Lot size (m²)">
+                <Field label="Lot size (m²)" error={fieldErrors.lot_size}>
                   <input
                     type="number"
                     value={form.lot_size}
                     onChange={(e) => setField("lot_size", e.target.value)}
                     placeholder="—"
                     min="0"
-                    className={inputClass}
+                    className={fieldErrors.lot_size ? inputErrorClass : inputClass}
                   />
                 </Field>
               </div>
@@ -513,14 +970,30 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
                   className={inputClass}
                 />
               </Field>
+
+              {/* BH-30 — Map location picker */}
+              <Field label="Pin on map (optional)">
+                <DynamicLocationPicker
+                  lat={form.latitude ? Number(form.latitude) : null}
+                  lng={form.longitude ? Number(form.longitude) : null}
+                  onPick={(pickedLat, pickedLng) => {
+                    setField("latitude", String(pickedLat));
+                    setField("longitude", String(pickedLng));
+                  }}
+                  onClear={() => {
+                    setField("latitude", "");
+                    setField("longitude", "");
+                  }}
+                />
+              </Field>
             </div>
 
             {/* Save button — outside scroll area */}
             <div className="px-5 py-4 border-t border-sand-dark flex-shrink-0">
               <button
                 type="button"
-                onClick={handleSave}
-                disabled={isSaving}
+                onClick={() => void handleSave()}
+                disabled={isSaving || !isFormValid(form, fieldErrors)}
                 className="w-full bg-primary text-white font-medium text-sm rounded-[12px] py-3.5 active:scale-[0.97] transition-transform duration-100 disabled:opacity-60"
               >
                 {isSaving ? "Saving…" : editingListing ? "Save changes" : "Create listing"}
@@ -538,11 +1011,17 @@ export function AgentDashboard({ agentId, initialListings }: AgentDashboardProps
 const inputClass =
   "w-full bg-sand rounded-[12px] px-3 py-2.5 text-sm text-narra placeholder:text-muted outline-none focus:ring-2 focus:ring-primary/30";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+const inputErrorClass =
+  "w-full bg-sand rounded-[12px] px-3 py-2.5 text-sm text-narra placeholder:text-muted outline-none focus:ring-2 focus:ring-primary/30 ring-2 ring-primary/50";
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted mb-1">{label}</p>
       {children}
+      {error && (
+        <p className="text-xs text-primary mt-1" role="alert">{error}</p>
+      )}
     </div>
   );
 }

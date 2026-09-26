@@ -10,8 +10,13 @@
   --color-sand:          #F8F3EC;
   --color-sand-dark:     #EDE5D8;
   --color-narra:         #2C1A0E;
-  --color-muted:         #7A6A5E;
-  --color-muted-light:   #A89888;
+  --color-muted:         #6C5D53;
+  --color-muted-light:   #796d62;
+
+  /* Short-name aliases used by older utilities */
+  --narra: var(--color-narra);
+  --muted: var(--color-muted);
+  --muted-light: var(--color-muted-light);
 
   /* ── Typography ──────────────────────────────────────── */
   --font-display: var(--font-playfair), Georgia, serif;
@@ -35,6 +40,20 @@
   --nav-height: 64px;
 }
 
+/* ── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] {
+  --color-sand:      #1C1410;
+  --color-sand-dark: #2A1F18;
+  --color-narra:     #F0E8DF;
+  --color-muted:     #9A8A7E;
+  --color-muted-light: #7A6A5E;
+
+  /* Short-name aliases */
+  --narra: var(--color-narra);
+  --muted: var(--color-muted);
+  --muted-light: var(--color-muted-light);
+}
+
 /* ── Base styles ─────────────────────────────────────────── */
 body {
   background-color: var(--color-sand);
@@ -53,6 +72,22 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Toast slide-down animation ──────────────────────────── */
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-toast-in {
+  animation: toastIn 200ms ease-out both;
 }
 
 /* ── Custom delay utilities ──────────────────────────────── */
@@ -98,6 +133,14 @@ body {
   background-image: linear-gradient(to bottom right, #be123c, #dc2626, #ea580c);
 }
 
+/* ── Leaflet custom pin icon reset ───────────────────────── */
+/* Removes the default white box Leaflet adds to divIcon containers */
+.leaflet-pin-icon {
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
 /* ── Respect prefers-reduced-motion ──────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -108,3 +151,17 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Quick a11y overrides — high contrast helpers for Profile page */
+.hc-text {
+  color: var(--color-narra, #2C1A0E) !important;
+}
+.hc-text-strong {
+  color: var(--color-narra, #2C1A0E) !important;
+  font-weight: 600 !important;
+}
+/* Ensure Tailwind text-narra always resolves to the token (fallback provided) */
+.text-narra {
+  color: var(--color-narra, #2C1A0E) !important;
+}
+

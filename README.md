@@ -1,5 +1,18 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database Types
+
+Supabase TypeScript types are auto-generated from the live schema into `lib/database.types.ts`.
+
+**After any schema change**, regenerate the types:
+
+```bash
+npx supabase login        # one-time: authenticate with your Supabase account
+npm run gen:types         # writes lib/database.types.ts from the remote schema
+```
+
+The generated `Database` type is re-exported from `lib/types.ts` and used to type both the server and browser Supabase clients.
+
 ## Getting Started
 
 First, run the development server:
