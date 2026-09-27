@@ -49,4 +49,4 @@ next-env.d.ts
 
 # seed scripts output — generated locally, not committed
 scripts/generated/
-screenshots/
+/screenshots/
