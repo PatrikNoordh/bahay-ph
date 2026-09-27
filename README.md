@@ -315,7 +315,7 @@ Every ticket followed the same flow:
 2. Implement against the ticket's acceptance criteria
 3. `npm run lint` and `npm run build` must pass
 4. Open a pull request into `dev` using the PR template (summary, what was done per layer, acceptance criteria, manual test steps)
-5. Review and merge; `dev` is released to `main`, which Vercel deploys to production
+5. Test the change in the app, then merge; `dev` is released to `main`, which Vercel deploys to production
 
 ### Database Diagram
 
@@ -560,7 +560,7 @@ bahay-ph/
 
 ### AI-Assisted Development
 
-This project was also an experiment in working with AI coding tools in a structured, professional way. I acted as product owner and lead developer: I wrote the tickets and project rules, and reviewed every change before it was merged.
+This project was also an experiment in working with AI coding tools in a structured way. Claude Code wrote the code, and I directed the work: tickets with acceptance criteria in Linear, rules in `CLAUDE.md`, and a requirement that lint and build pass. I have not read the code line by line. I tested that every change worked in the app, and redirected the work when it didn't.
 
 - **Written project rules** — [`CLAUDE.md`](CLAUDE.md) defines the architecture, design system, business rules, branch naming, commit format and PR template that AI agents must follow.
 - **Tools** — mainly [Claude Code](https://www.anthropic.com/claude-code), plus GitHub Copilot for some tickets.
@@ -604,7 +604,7 @@ This project was also an experiment in working with AI coding tools in a structu
 
 ### Content
 
-Designed and built by [Patrik Noordh](https://github.com/PatrikNoordh).
+Product, planning and testing by [Patrik Noordh](https://github.com/PatrikNoordh). Code written with [Claude Code](https://www.anthropic.com/claude-code) and GitHub Copilot — see [AI-Assisted Development](#ai-assisted-development).
 
 ### Media
 
