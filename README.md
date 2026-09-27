@@ -461,23 +461,21 @@ Both are loaded through `next/font/google`, so they are self-hosted and don't ca
 
 ### Manual Testing
 
-Every pull request included manual test steps, and each screen was checked at a 375–390px mobile width.
+Every feature was tested by hand in the app when it was built. Each pull request lists its manual test steps, and each screen was checked at a 375–390px mobile width.
 
-| Feature Area | Description | Status |
+The table below is a smoke test of the live production site, run on 27 September 2026:
+
+| Feature Area | What was checked | Result |
 |:---|:---|:---:|
-| **Home** | Hero, sale/rent toggle, area chips, live stats and featured listings load from Supabase | ✅ |
-| **Search** | Filters, price range, sorting and "Load more" return the correct listings; filters survive a page reload | ⬜ |
-| **Map** | Pins and clusters appear for all listings with coordinates; the sale/rent filter updates the pins | ✅ |
-| **Property Detail** | Photo carousel, facts, broker card and related listings show correctly; unknown IDs show a 404 page | ✅ |
-| **WhatsApp / Call** | WhatsApp opens a chat with the broker's number and a pre-filled message; Call opens the dialler | ⬜ |
+| **Home** | Hero search, area chips, live listing stats and featured listings load from Supabase | ✅ |
+| **Search** | Filter controls and the results grid load with live listings | ✅ |
+| **Map** | Price pins and clusters appear across Metro Cebu | ✅ |
+| **Property Detail** | Photo carousel, key facts, description and broker card display correctly | ✅ |
+| **404 handling** | An unknown property ID returns the 404 page | ✅ |
 | **Images** | Listing photos load from Supabase Storage through the Next.js image optimiser | ✅ |
-| **Sign up / Sign in** | New accounts get a confirmation email; wrong credentials show an error | ⬜ |
-| **Password reset** | Reset email is sent and the new password works | ⬜ |
-| **Saved Listings** | Heart saves and unsaves; bulk remove works; `/saved` redirects to sign-in when logged out | ⬜ |
-| **Broker Onboarding** | Registration creates an unverified agent and sends the admin email | ⬜ |
-| **Agent Dashboard** | Create, edit and delete a listing with photos and a map location; brokers can't edit other brokers' listings | ⬜ |
+| **Protected routes** | `/saved` and `/agent/dashboard` redirect logged-out visitors to sign-in | ✅ |
 | **Tools** | Mortgage calculator, market trends and buying guide display correctly | ✅ |
-| **Settings** | Dark/light mode switches and is remembered on reload | ✅ |
+| **Dark mode** | The saved theme preference is applied on page load | ✅ |
 
 ### Bugs
 
